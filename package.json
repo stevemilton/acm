@@ -1,0 +1,10 @@
+{
+  "name": "acm",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "install": "cd app && npm install",
+    "build": "cd app && npm run build",
+    "start": "cd app && npm start"
+  }
+}

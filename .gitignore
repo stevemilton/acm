@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+contracts/.env
+
+# Build outputs
+app/.next/
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
