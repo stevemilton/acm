@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CreateOfferingForm } from "./create-offering-form";
+import { EscrowManage, DistributeRevenue } from "./client-components";
+
+const FDUSD_ADDRESS = "0xAceB12E8E2F7126657E290BE382dA2926C1926FA";
 
 export default async function OperatorAgentDetailPage({
   params,
@@ -24,7 +27,7 @@ export default async function OperatorAgentDetailPage({
 
   const { data: offerings } = await supabase
     .from("offerings")
-    .select("*")
+    .select("*, escrow_address, share_token_address, distributor_address")
     .eq("agent_id", agent.id)
     .order("created_at", { ascending: false });
 
@@ -191,6 +194,23 @@ export default async function OperatorAgentDetailPage({
 
       {/* Create offering form */}
       {canCreateOffering && <CreateOfferingForm agentId={agent.id} />}
+
+      {/* Escrow Management */}
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Escrow Management</h2>
+        <EscrowManage
+          escrowAddress={offerings?.[0]?.escrow_address ?? undefined}
+        />
+      </div>
+
+      {/* Revenue Distribution */}
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Revenue Distribution</h2>
+        <DistributeRevenue
+          distributorAddress={offerings?.[0]?.distributor_address ?? undefined}
+          fdusdAddress={FDUSD_ADDRESS}
+        />
+      </div>
 
       {/* Distributions history */}
       <div className="mt-8">

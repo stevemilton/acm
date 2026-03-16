@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { TestFaucet } from "./client-components";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -94,6 +95,11 @@ export default async function DashboardPage() {
           <p className="text-muted text-sm">Agents Invested</p>
           <p className="text-2xl font-bold mt-1">{agentIds.length}</p>
         </div>
+      </div>
+
+      {/* Testnet Faucet */}
+      <div className="mb-10 max-w-sm">
+        <TestFaucet />
       </div>
 
       {/* Holdings */}

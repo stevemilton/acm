@@ -1,12 +1,33 @@
 // ABI fragments for contract interactions
-// Full ABIs will be generated from Hardhat compilation
+// Matches deployed Solidity contracts on BNB testnet
 
 export const ESCROW_ABI = [
   {
-    inputs: [],
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
     name: "deposit",
     outputs: [],
-    stateMutability: "payable",
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "release",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "triggerRefund",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "claimRefund",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -24,6 +45,41 @@ export const ESCROW_ABI = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "minRaise",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "maxRaise",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "pricePerShare",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "deadline",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "sharesPurchased",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "address", name: "", type: "address" }],
     name: "deposits",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
@@ -33,13 +89,6 @@ export const ESCROW_ABI = [
 ] as const;
 
 export const AGENT_SHARE_ABI = [
-  {
-    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
-    name: "purchase",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
   {
     inputs: [{ internalType: "address", name: "account", type: "address" }],
     name: "balanceOf",
@@ -54,14 +103,35 @@ export const AGENT_SHARE_ABI = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [],
+    name: "revenueShareBps",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "agentId",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "transfersEnabled",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;
 
 export const REVENUE_DISTRIBUTOR_ABI = [
   {
-    inputs: [],
+    inputs: [{ internalType: "uint256", name: "grossRevenue", type: "uint256" }],
     name: "distribute",
     outputs: [],
-    stateMutability: "payable",
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -72,15 +142,84 @@ export const REVENUE_DISTRIBUTOR_ABI = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "cumulativeRevenuePerToken",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "address", name: "", type: "address" }],
-    name: "claimable",
+    name: "pendingClaims",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "", type: "address" }],
+    name: "lastClaimedCumulative",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
 ] as const;
 
-// ERC-20 approve ABI for FDUSD
+export const OFFERING_FACTORY_ABI = [
+  {
+    inputs: [
+      { internalType: "string", name: "agentId", type: "string" },
+      { internalType: "string", name: "name", type: "string" },
+      { internalType: "string", name: "symbol", type: "string" },
+      { internalType: "uint256", name: "revenueShareBps", type: "uint256" },
+      { internalType: "uint256", name: "totalSupply", type: "uint256" },
+      { internalType: "uint256", name: "minRaise", type: "uint256" },
+      { internalType: "uint256", name: "maxRaise", type: "uint256" },
+      { internalType: "uint256", name: "pricePerShare", type: "uint256" },
+      { internalType: "uint256", name: "deadline", type: "uint256" },
+      { internalType: "address", name: "operator", type: "address" },
+    ],
+    name: "createOffering",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "id", type: "uint256" }],
+    name: "getOffering",
+    outputs: [
+      { internalType: "address", name: "agentShare", type: "address" },
+      { internalType: "address", name: "escrow", type: "address" },
+      { internalType: "address", name: "revenueDistributor", type: "address" },
+      { internalType: "string", name: "agentId", type: "string" },
+      { internalType: "address", name: "operator", type: "address" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "totalOfferings",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "paymentToken",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "platformWallet",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
+// Standard ERC-20 ABI
 export const ERC20_ABI = [
   {
     inputs: [
@@ -107,6 +246,109 @@ export const ERC20_ABI = [
     name: "balanceOf",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "address", name: "to", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "transfer",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "decimals",
+    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "name",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "symbol",
+    outputs: [{ internalType: "string", name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "totalSupply",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
+// Event ABIs for indexing
+
+export const ESCROW_EVENTS_ABI = [
+  {
+    type: "event",
+    name: "Deposited",
+    inputs: [
+      { indexed: true, name: "investor", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" },
+      { indexed: false, name: "shares", type: "uint256" },
+    ],
+  },
+  {
+    type: "event",
+    name: "Released",
+    inputs: [
+      { indexed: false, name: "totalAmount", type: "uint256" },
+    ],
+  },
+  {
+    type: "event",
+    name: "Refunded",
+    inputs: [
+      { indexed: true, name: "investor", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" },
+    ],
+  },
+] as const;
+
+export const REVENUE_EVENTS_ABI = [
+  {
+    type: "event",
+    name: "RevenueReceived",
+    inputs: [
+      { indexed: false, name: "gross", type: "uint256" },
+      { indexed: false, name: "platformFee", type: "uint256" },
+      { indexed: false, name: "operatorAmount", type: "uint256" },
+      { indexed: false, name: "investorAmount", type: "uint256" },
+    ],
+  },
+  {
+    type: "event",
+    name: "InvestorClaimed",
+    inputs: [
+      { indexed: true, name: "investor", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" },
+    ],
+  },
+] as const;
+
+// MockFDUSD test token — includes mint for faucet
+export const MOCK_FDUSD_ABI = [
+  ...ERC20_ABI,
+  {
+    inputs: [
+      { internalType: "address", name: "to", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+    ],
+    name: "mint",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ] as const;

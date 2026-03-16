@@ -1,8 +1,8 @@
 "use client";
 
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
-import { bscTestnet } from "wagmi/chains";
 import { useState } from "react";
+import { ACTIVE_CHAIN_ID, activeChainConfig } from "@/lib/chain-config";
 
 export function ConnectWalletButton() {
   const { address, isConnected, chain } = useAccount();
@@ -11,7 +11,7 @@ export function ConnectWalletButton() {
   const { switchChain } = useSwitchChain();
   const [showMenu, setShowMenu] = useState(false);
 
-  const isWrongNetwork = isConnected && chain?.id !== bscTestnet.id;
+  const isWrongNetwork = isConnected && chain?.id !== ACTIVE_CHAIN_ID;
 
   if (isConnected && address) {
     return (
@@ -33,12 +33,12 @@ export function ConnectWalletButton() {
             {isWrongNetwork && (
               <button
                 onClick={() => {
-                  switchChain({ chainId: bscTestnet.id });
+                  switchChain({ chainId: ACTIVE_CHAIN_ID });
                   setShowMenu(false);
                 }}
                 className="w-full text-left px-4 py-2 text-sm text-yellow-500 hover:bg-card-border/30"
               >
-                Switch to BNB Testnet
+                Switch to {activeChainConfig.name}
               </button>
             )}
             <button
@@ -72,7 +72,7 @@ export function ConnectWalletButton() {
             <button
               key={connector.uid}
               onClick={() => {
-                connect({ connector, chainId: bscTestnet.id });
+                connect({ connector, chainId: ACTIVE_CHAIN_ID });
                 setShowMenu(false);
               }}
               className="w-full text-left px-4 py-3 text-sm hover:bg-card-border/30 transition-colors first:rounded-t-lg last:rounded-b-lg"

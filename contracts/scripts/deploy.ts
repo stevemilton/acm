@@ -9,64 +9,48 @@ async function main() {
     "BNB"
   );
 
-  // --- Deploy a mock FDUSD token for testnet ---
+  // --- Deploy MockFDUSD ---
   // In production, use real FDUSD: 0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409
-  const MockToken = await ethers.getContractFactory("AgentShare");
-  const mockFDUSD = await MockToken.deploy(
-    "Mock FDUSD",
-    "mFDUSD",
-    "mock-fdusd",
-    1, // revenueShareBps (irrelevant for mock)
-    ethers.parseEther("1000000"), // 1M supply
-    deployer.address
-  );
+  const MockFDUSD = await ethers.getContractFactory("MockFDUSD");
+  const mockFDUSD = await MockFDUSD.deploy();
   await mockFDUSD.waitForDeployment();
   const mockFDUSDAddr = await mockFDUSD.getAddress();
-  console.log("Mock FDUSD deployed to:", mockFDUSDAddr);
+  console.log("MockFDUSD deployed to:", mockFDUSDAddr);
 
-  // --- Deploy AgentShare token ---
-  const AgentShare = await ethers.getContractFactory("AgentShare");
-  const agentShare = await AgentShare.deploy(
-    "RevenueBot Share",
-    "RVBOT",
-    "demo-agent-1",
-    1500, // 15% revenue share
-    1000, // max 1000 shares
-    deployer.address
-  );
-  await agentShare.waitForDeployment();
-  const agentShareAddr = await agentShare.getAddress();
-  console.log("AgentShare deployed to:", agentShareAddr);
+  // --- Deploy OfferingFactory ---
+  const OfferingFactory = await ethers.getContractFactory("OfferingFactory");
+  const factory = await OfferingFactory.deploy(mockFDUSDAddr, deployer.address);
+  await factory.waitForDeployment();
+  const factoryAddr = await factory.getAddress();
+  console.log("OfferingFactory deployed to:", factoryAddr);
 
-  // --- Deploy Escrow ---
-  const Escrow = await ethers.getContractFactory("Escrow");
-  const deadline = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
-  const escrow = await Escrow.deploy(
-    mockFDUSDAddr, // paymentToken
-    agentShareAddr, // shareToken
-    ethers.parseEther("100"), // minRaise: 100 FDUSD
-    ethers.parseEther("10000"), // maxRaise: 10,000 FDUSD
-    ethers.parseEther("10"), // pricePerShare: 10 FDUSD
+  // --- Create a demo offering via the factory ---
+  const deadline = Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60; // 90 days
+
+  const tx = await factory.createOffering({
+    agentId: "demo-agent-1",
+    name: "RevenueBot Shares",
+    symbol: "RBS",
+    revenueShareBps: 1500, // 15%
+    totalSupply: 10000,
+    minRaise: ethers.parseEther("1000"),
+    maxRaise: ethers.parseEther("50000"),
+    pricePerShare: ethers.parseEther("5"),
     deadline,
-    deployer.address
-  );
-  await escrow.waitForDeployment();
-  const escrowAddr = await escrow.getAddress();
-  console.log("Escrow deployed to:", escrowAddr);
+    operator: deployer.address,
+  });
+  await tx.wait();
 
-  // --- Deploy RevenueDistributor ---
-  const RevenueDistributor = await ethers.getContractFactory(
-    "RevenueDistributor"
-  );
-  const revenueDistributor = await RevenueDistributor.deploy(
-    mockFDUSDAddr, // paymentToken
-    agentShareAddr, // shareToken
-    deployer.address, // platformWallet
-    deployer.address // operatorWallet
-  );
-  await revenueDistributor.waitForDeployment();
-  const revenueDistributorAddr = await revenueDistributor.getAddress();
-  console.log("RevenueDistributor deployed to:", revenueDistributorAddr);
+  // Read the demo offering back from the factory
+  const offering = await factory.getOffering(0);
+  const total = await factory.totalOfferings();
+
+  console.log(`\nDemo offering created (ID 0 of ${total} total):`);
+  console.log(`  AgentShare:          ${offering.agentShare}`);
+  console.log(`  Escrow:              ${offering.escrow}`);
+  console.log(`  RevenueDistributor:  ${offering.revenueDistributor}`);
+  console.log(`  Agent ID:            ${offering.agentId}`);
+  console.log(`  Operator:            ${offering.operator}`);
 
   // --- Summary ---
   const network = await ethers.provider.getNetwork();
@@ -76,10 +60,13 @@ async function main() {
   console.log(`Network: ${network.name} (Chain ID: ${network.chainId})`);
   console.log(`Deployer: ${deployer.address}`);
   console.log("");
-  console.log(`Mock FDUSD:          ${mockFDUSDAddr}`);
-  console.log(`AgentShare:          ${agentShareAddr}`);
-  console.log(`Escrow:              ${escrowAddr}`);
-  console.log(`RevenueDistributor:  ${revenueDistributorAddr}`);
+  console.log(`MockFDUSD:             ${mockFDUSDAddr}`);
+  console.log(`OfferingFactory:       ${factoryAddr}`);
+  console.log("");
+  console.log("Demo Offering (ID 0):");
+  console.log(`  AgentShare:          ${offering.agentShare}`);
+  console.log(`  Escrow:              ${offering.escrow}`);
+  console.log(`  RevenueDistributor:  ${offering.revenueDistributor}`);
   console.log("========================================");
   console.log(
     "\nUpdate CONTRACT_ADDRESSES in app/src/lib/wagmi.ts with these addresses."

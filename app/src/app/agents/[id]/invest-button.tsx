@@ -6,22 +6,25 @@ import { useRouter } from "next/navigation";
 import {
   useAccount,
   useWriteContract,
+  useReadContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { parseEther } from "viem";
-import { ESCROW_ABI } from "@/lib/contracts";
-import { CONTRACT_ADDRESSES } from "@/lib/wagmi";
+import { parseUnits, formatUnits } from "viem";
+import { ESCROW_ABI, ERC20_ABI } from "@/lib/contracts";
+import { getFdusdAddress, getExplorerUrl } from "@/lib/chain-config";
 
 export function InvestButton({
   offeringId,
   pricePerShare,
   sharesRemaining,
   isLoggedIn,
+  escrowAddress: escrowAddressProp,
 }: {
   offeringId: string;
   pricePerShare: number;
   sharesRemaining: number;
   isLoggedIn: boolean;
+  escrowAddress?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -30,6 +33,7 @@ export function InvestButton({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+  const [step, setStep] = useState<"idle" | "approving" | "depositing">("idle");
   const router = useRouter();
   const supabase = createClient();
 
@@ -40,7 +44,42 @@ export function InvestButton({
     hash: txHash,
   });
 
-  const totalCost = quantity * pricePerShare;
+  const escrowAddress = escrowAddressProp
+    ? (escrowAddressProp as `0x${string}`)
+    : undefined;
+  const fdusdAddress = getFdusdAddress();
+
+  // Total cost in FDUSD (18 decimals)
+  const totalCostNumber = quantity * pricePerShare;
+  const totalCostUnits = parseUnits(totalCostNumber.toString(), 18);
+
+  // Read FDUSD balance
+  const { data: fdusdBalance } = useReadContract({
+    address: fdusdAddress,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && rail === "crypto" },
+  });
+
+  // Read FDUSD allowance for escrow
+  const { data: fdusdAllowance, refetch: refetchAllowance } = useReadContract({
+    address: fdusdAddress,
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    args: address && escrowAddress ? [address, escrowAddress] : undefined,
+    query: { enabled: !!address && !!escrowAddress && rail === "crypto" },
+  });
+
+  const formattedBalance = fdusdBalance
+    ? formatUnits(fdusdBalance, 18)
+    : "0";
+
+  const needsApproval =
+    fdusdAllowance !== undefined && fdusdAllowance < totalCostUnits;
+
+  const insufficientBalance =
+    fdusdBalance !== undefined && fdusdBalance < totalCostUnits;
 
   async function handleFiatInvest() {
     const {
@@ -86,23 +125,43 @@ export function InvestButton({
       throw new Error("Connect your wallet first");
     }
 
-    const escrowAddress = CONTRACT_ADDRESSES.testnet.escrow;
     if (!escrowAddress) {
-      throw new Error("Escrow contract not yet deployed");
+      throw new Error("Crypto investment not available for this offering");
     }
 
-    // Call escrow.deposit() with BNB value
-    // Each share costs pricePerShare in BNB equivalent on testnet
-    const value = parseEther((quantity * 0.01).toString()); // 0.01 BNB per share on testnet
+    if (insufficientBalance) {
+      throw new Error(
+        `Insufficient FDUSD balance. You have ${Number(formattedBalance).toLocaleString()} FDUSD but need ${totalCostNumber.toLocaleString()} FDUSD.`
+      );
+    }
 
-    const hash = await writeContractAsync({
+    // Step 1: Approve FDUSD spending if needed
+    if (needsApproval) {
+      setStep("approving");
+      const approveHash = await writeContractAsync({
+        address: fdusdAddress,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [escrowAddress, totalCostUnits],
+      });
+
+      // Wait for approval tx to be mined
+      setTxHash(approveHash);
+      // Brief wait for approval to propagate, then refetch allowance
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await refetchAllowance();
+    }
+
+    // Step 2: Deposit into escrow (ERC-20 transferFrom, no value)
+    setStep("depositing");
+    const depositHash = await writeContractAsync({
       address: escrowAddress,
       abi: ESCROW_ABI,
       functionName: "deposit",
-      value,
+      args: [totalCostUnits],
     });
 
-    setTxHash(hash);
+    setTxHash(depositHash);
 
     // Also record in Supabase for tracking
     const {
@@ -131,7 +190,7 @@ export function InvestButton({
           quantity,
           purchase_price: pricePerShare,
           rail: "crypto",
-          token_id: hash, // tx hash as reference
+          token_id: depositHash, // tx hash as reference
         });
       }
     }
@@ -141,6 +200,7 @@ export function InvestButton({
     e.preventDefault();
     setError(null);
     setLoading(true);
+    setStep("idle");
 
     try {
       if (rail === "fiat") {
@@ -154,6 +214,7 @@ export function InvestButton({
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
+      setStep("idle");
     }
   }
 
@@ -173,11 +234,11 @@ export function InvestButton({
       <div className="p-4 rounded-lg bg-accent/10 border border-accent/30 text-center">
         <p className="text-accent font-medium">Investment confirmed!</p>
         <p className="text-sm text-muted mt-1">
-          {quantity} shares for ${totalCost.toLocaleString()}
+          {quantity} shares for {totalCostNumber.toLocaleString()} FDUSD
         </p>
         {txHash && (
           <a
-            href={`https://testnet.bscscan.com/tx/${txHash}`}
+            href={getExplorerUrl("tx", txHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-accent/70 hover:underline mt-2 inline-block"
@@ -229,24 +290,39 @@ export function InvestButton({
                 : "border-card-border bg-card text-muted"
             }`}
           >
-            Crypto (BNB)
+            Crypto (FDUSD)
           </button>
         </div>
       </div>
 
+      {/* No escrow address for crypto */}
+      {rail === "crypto" && !escrowAddress && (
+        <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-yellow-500">
+          Crypto investment not available for this offering
+        </div>
+      )}
+
       {/* Wallet status for crypto */}
-      {rail === "crypto" && !isConnected && (
+      {rail === "crypto" && escrowAddress && !isConnected && (
         <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-yellow-500">
           Connect your wallet in the navbar to pay with crypto
         </div>
       )}
 
-      {rail === "crypto" && isConnected && address && (
-        <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 text-sm">
-          <span className="text-muted">Wallet: </span>
-          <span className="font-mono text-xs">
-            {address.slice(0, 6)}...{address.slice(-4)}
-          </span>
+      {rail === "crypto" && escrowAddress && isConnected && address && (
+        <div className="p-3 rounded-lg bg-accent/5 border border-accent/20 text-sm space-y-1">
+          <div>
+            <span className="text-muted">Wallet: </span>
+            <span className="font-mono text-xs">
+              {address.slice(0, 6)}...{address.slice(-4)}
+            </span>
+          </div>
+          <div>
+            <span className="text-muted">FDUSD Balance: </span>
+            <span className={`font-medium ${insufficientBalance ? "text-red-400" : "text-accent"}`}>
+              {Number(formattedBalance).toLocaleString()} FDUSD
+            </span>
+          </div>
         </div>
       )}
 
@@ -274,15 +350,20 @@ export function InvestButton({
           <span className="text-sm text-muted">Total Cost</span>
           <span className="text-lg font-bold">
             {rail === "fiat" ? (
-              <>${totalCost.toLocaleString()}</>
+              <>${totalCostNumber.toLocaleString()}</>
             ) : (
               <>
-                {(quantity * 0.01).toFixed(4)}{" "}
-                <span className="text-xs text-muted">BNB</span>
+                {totalCostNumber.toLocaleString()}{" "}
+                <span className="text-xs text-muted">FDUSD</span>
               </>
             )}
           </span>
         </div>
+        {rail === "crypto" && needsApproval && (
+          <p className="text-xs text-yellow-500 mt-1">
+            Requires FDUSD approval before deposit
+          </p>
+        )}
       </div>
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -293,17 +374,41 @@ export function InvestButton({
         </p>
       )}
 
+      {step === "approving" && (
+        <p className="text-accent text-sm">
+          Step 1/2: Approving FDUSD spending...
+        </p>
+      )}
+
+      {step === "depositing" && (
+        <p className="text-accent text-sm">
+          {needsApproval ? "Step 2/2" : "Step 1/1"}: Depositing into escrow...
+        </p>
+      )}
+
       <div className="flex gap-3">
         <button
           type="submit"
-          disabled={loading || isTxPending || (rail === "crypto" && !isConnected)}
+          disabled={
+            loading ||
+            isTxPending ||
+            (rail === "crypto" && !escrowAddress) ||
+            (rail === "crypto" && !isConnected) ||
+            (rail === "crypto" && insufficientBalance)
+          }
           className="flex-1 py-2.5 rounded-lg bg-accent text-background font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 text-sm"
         >
           {loading || isTxPending
-            ? "Processing..."
+            ? step === "approving"
+              ? "Approving FDUSD..."
+              : step === "depositing"
+                ? "Depositing..."
+                : "Processing..."
             : rail === "fiat"
               ? "Pay with Card"
-              : "Pay with BNB"}
+              : needsApproval
+                ? "Approve & Deposit FDUSD"
+                : "Deposit FDUSD"}
         </button>
         <button
           type="button"
