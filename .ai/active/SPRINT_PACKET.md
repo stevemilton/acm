@@ -1,88 +1,106 @@
-# Sprint: Solidity Unit Tests
+# Sprint: Supabase RLS Audit
 
-**Sprint Type:** feature
-**Sprint Reason:** S1 (Hardhat unit tests for all contracts) is the most actionable of the 3 remaining compliance gaps. Unit tests are a prerequisite for audit (S3) and validate the critical Escrow share-transfer fix from sprint 002. The claimRefund token-return bug (Q6 from sprint 002 review) should also be fixed and tested here.
+**Sprint Type:** repair
+**Sprint Reason:** X1 (RLS audit) is the last internally-actionable compliance gap. RLS is enabled on all 6 user-facing tables but several write policies are missing, service-role routes lack documentation, and no test verifies that RLS actually blocks unauthorized access. This must pass before mainnet.
 
 ## Objective
 
-Write comprehensive Hardhat unit tests for all 5 Solidity contracts. Fix the `Escrow.claimRefund()` token-return bug. Achieve full coverage of happy paths, revert conditions, and access control.
+Audit all Supabase RLS policies, fix gaps, document the security model, and write tests that prove RLS blocks unauthorized reads/writes.
 
 ## Why This Sprint Matters
 
-Zero Solidity tests exist. The Escrow contract was just patched with a critical bug fix (share transfer) that has no regression protection. The claimRefund path has a known token-leak bug. Any future contract changes risk silent regressions without a test suite. S1 is a prerequisite for S3 (audit).
+RLS is the primary data access control layer. The current state has known gaps: `offerings`, `shares`, and `distributions` tables block all INSERT/UPDATE at the RLS level, relying entirely on application logic. If any API route has a bug or a new route is added without ownership checks, data can be corrupted. The indexer tables (`indexer_state`, `on_chain_events`) have no RLS, which is intentional but undocumented. Without an audit, the platform cannot be considered secure for real funds.
 
 ## In Scope
 
-1. **Fix Escrow.claimRefund()** — must return AgentShare tokens to the contract before zeroing `sharesPurchased`
-2. **Test MockFDUSD** — mint, transfer, approve, balanceOf
-3. **Test AgentShare** — constructor, purchaseShares (owner-only), transfersEnabled toggle, _update override
-4. **Test Escrow** — deposit (happy + revert), release (owner-only, min raise check), triggerRefund (deadline, min not met), claimRefund (token return), status transitions
-5. **Test RevenueDistributor** — distribute (fee split math, owner-only), claim (share-weighted, nothing-to-claim revert), multi-investor proportional claims
-6. **Test OfferingFactory** — createOffering (approved operators, param validation), getOffering, totalOfferings, setApprovedOperator (owner-only)
+1. **Audit existing RLS policies** — Document every policy on every table. Identify gaps where application logic substitutes for RLS.
+2. **Fix missing write policies:**
+   - `offerings` — needs INSERT policy scoped to the operator who owns the parent agent
+   - `offerings` — needs UPDATE policy scoped to the operator who owns the parent agent
+   - `shares` — needs INSERT policy (service-role only, or scoped to the invest flow)
+   - `distributions` — needs INSERT policy scoped to the operator who owns the agent
+3. **Add DELETE policies** — Explicitly deny DELETE on all tables (or add scoped policies where deletion is a valid operation)
+4. **Document intentional RLS exclusions** — `indexer_state` and `on_chain_events` are system tables accessed only via service-role. Document why RLS is not needed.
+5. **Verify service-role route protection** — Confirm all 3 service-role routes (`/api/indexer`, `/api/indexer/events`, `/api/monitor/revenue`) require `INDEXER_SECRET` auth and cannot be called by anonymous users.
+6. **Write RLS tests** — SQL-based tests that prove:
+   - Anon users cannot read `shares` belonging to other investors
+   - Operators cannot modify other operators' agents
+   - Unauthenticated requests cannot write to any table
+   - Service-role can write to all tables (indexer use case)
+7. **Create a new migration** (`00005_rls_audit.sql`) for any policy changes
 
 ## Out of Scope
 
-- Integration tests against live testnet (covered by e2e-cycle.ts)
-- UI tests
-- RLS audit (separate sprint X1)
-- Gas optimization
-- Any new contract features
+- Smart contract security (separate S3 sprint — requires external auditor)
+- Application-level authorization logic refactoring
+- New features or UI changes
+- Database schema changes (no new tables/columns)
+- Auth flow changes (login, signup, session management)
 
 ## Files / Modules In Scope
 
-- `contracts/contracts/MockFDUSD.sol`
-- `contracts/contracts/AgentShare.sol`
-- `contracts/contracts/Escrow.sol` (fix + test)
-- `contracts/contracts/RevenueDistributor.sol`
-- `contracts/contracts/OfferingFactory.sol`
-- `contracts/test/` (new directory)
-- `contracts/hardhat.config.ts` (if test config needed)
+- `supabase/migrations/00001_initial_schema.sql` — reference for existing policies
+- `supabase/migrations/00005_rls_audit.sql` — NEW: policy fixes
+- `app/src/app/api/indexer/route.ts` — verify INDEXER_SECRET check
+- `app/src/app/api/indexer/events/route.ts` — verify INDEXER_SECRET check
+- `app/src/app/api/monitor/revenue/route.ts` — verify INDEXER_SECRET check
+- `app/src/app/api/offerings/[id]/invest/route.ts` — verify ownership checks align with RLS
+- `app/src/app/api/offerings/[id]/contracts/route.ts` — verify ownership checks align with RLS
+- `app/src/app/api/distributions/route.ts` — verify ownership checks align with RLS
+- `supabase/tests/` — NEW: RLS test files (if using pgTAP or SQL scripts)
 
 ## Constraints
 
-- Tests run locally via `npx hardhat test` — no testnet RPC needed
-- Use Hardhat's built-in network (local EVM fork)
-- Follow existing code style (TypeScript tests, ethers v6)
-- No BigInt literals (`123n`) — use `BigInt(123)`
-- The claimRefund fix changes Escrow.sol — recompile and verify e2e-cycle.ts still works conceptually (no need to re-run on testnet)
+- RLS policy changes must be backward-compatible with existing data
+- Do not break the indexer — service-role routes must continue to bypass RLS
+- Do not break the invest flow — `shares` INSERT must work for authenticated investors via the API
+- All policy changes go in a single migration file (`00005_rls_audit.sql`)
+- Test with both anon key (user session) and service-role key perspectives
+- No changes to `auth.users` or Supabase auth config
 
 ## Relevant Rules
 
-- Two-step ERC-20 pattern for all deposits (approve → deposit)
-- All amounts 18 decimals (parseEther/formatEther)
-- No BigInt literals
-- Factory pattern is canonical
-- 5% platform fee is hardcoded in RevenueDistributor
+- Supabase is the source of truth for off-chain state (RULES.md)
+- Supabase/viem clients must be created inside handlers, not at module level (RULES.md)
+- Database migrations via Supabase CLI or MCP tool (RULES.md)
+- Agent Shares are securities under Howey Test — data access control is a compliance requirement (RULES.md)
 
 ## Acceptance Criteria
 
-- [ ] `Escrow.claimRefund()` returns AgentShare tokens to the contract (bug fix)
-- [ ] `npx hardhat test` passes with 0 failures
-- [ ] Every public/external function on all 5 contracts has at least one test
-- [ ] Revert conditions tested (unauthorized caller, deadline, min raise, etc.)
-- [ ] Revenue distribution math verified (5% platform, revenueShareBps split)
-- [ ] Multi-investor claim scenario tested (2+ investors, proportional payouts)
-- [ ] `cd app && npm run build` still passes (no app regressions from Escrow fix)
-- [ ] `npx hardhat compile` passes clean
+- [ ] Every table has documented RLS policies (audit spreadsheet or markdown table in BUILD_REPORT)
+- [ ] `offerings` table has INSERT and UPDATE policies scoped to the owning operator
+- [ ] `shares` table has INSERT policy that works with the invest flow
+- [ ] `distributions` table has INSERT policy scoped to the owning operator
+- [ ] No table allows unrestricted DELETE (explicit DENY or no DELETE policy with RLS enabled)
+- [ ] `indexer_state` and `on_chain_events` RLS exclusion is documented with rationale
+- [ ] All 3 service-role routes reject requests without valid `INDEXER_SECRET`
+- [ ] RLS test script exists and passes — proves unauthorized access is blocked
+- [ ] `cd app && npm run build` still passes
+- [ ] Migration `00005_rls_audit.sql` applies cleanly
 
 ## Required Tests
 
-- `npx hardhat test` — primary deliverable
+- RLS test script (SQL or pgTAP) covering:
+  - Cross-user read isolation on `shares`
+  - Cross-operator write isolation on `agents`, `offerings`, `distributions`
+  - Unauthenticated write rejection on all user-facing tables
+  - Service-role bypass confirmation
 - `cd app && npm run build` — no regressions
 
 ## Docs To Update
 
-- `docs/mvp-sow-compliance-matrix.md` — S1 → Complete
-- `.ai/handoff/CURRENT_STATE.md` — reflect test suite exists, claimRefund fixed
-- `CHANGELOG.md` — v0.6.0 entry
+- `.ai/handoff/CURRENT_STATE.md` — X1 → Complete, update compliance score to 17/18
+- `docs/mvp-sow-compliance-matrix.md` — X1 → Complete with evidence
+- `CHANGELOG.md` — v0.7.0 entry
+- `ARCHITECTURE.md` — Add "Security Model" section documenting RLS policy summary and service-role usage pattern
 
 ## Definition of Done
 
-All acceptance criteria checked. `npx hardhat test` passes with full coverage of all 5 contracts. claimRefund bug fixed. BUILD_REPORT.md written with test output. Compliance matrix S1 marked Complete. Both builds pass.
+All acceptance criteria checked. Every user-facing table has correct RLS policies. RLS test script passes. Migration applies cleanly. Service-role routes verified. BUILD_REPORT.md written with full audit table. Compliance matrix X1 marked Complete. App build passes.
 
 ## Git Instructions
 
-- **Branch Name:** `sprint-003-solidity-tests`
-- **Base Branch:** `sprint-002-e2e-testnet`
-- **PR Strategy:** Single PR with all tests + claimRefund fix
+- **Branch Name:** `sprint-004-rls-audit`
+- **Base Branch:** `sprint-003-solidity-tests`
+- **PR Strategy:** Single PR with migration + tests + doc updates
 - **Merge Policy:** Squash merge after review pass
