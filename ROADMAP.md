@@ -6,11 +6,11 @@ Future-facing only. Historical work is in CHANGELOG.md.
 
 ### Remaining for testnet sign-off
 - [ ] Activate cron service for indexer automation (Railway cron or external)
-- [ ] Factory operator approval flow (approve operator wallet on-chain before they can deploy)
-- [ ] End-to-end test: create offering → deploy → invest → distribute → claim
+- [x] ~~Factory operator approval flow~~ — deployer approved on v2 factory (sprint 001)
+- [x] ~~End-to-end test: create offering → deploy → invest → distribute → claim~~ — verified via Hardhat E2E script on testnet (sprint 002). UI E2E walkthrough still pending.
 - [ ] Hardhat test suite for all Solidity contracts
 - [ ] Supabase RLS audit
-- [ ] Revenue monitor integration test (mock FDUSD transfers → verify revenue_events)
+- [x] ~~Revenue monitor integration test~~ — publicnode RPC, 4 events indexed live (sprint 002)
 
 ## Phase 2: Audit + Mainnet (Q3 2026)
 

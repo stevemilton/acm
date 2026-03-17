@@ -14,7 +14,7 @@ export const CHAIN_CONFIG = {
       escrow: "0x0c50cc920489B3FE39670708071c4eC959BA867F" as `0x${string}`,
       revenueDistributor: "0x3217ED63cB3ee9758c7b0D1047B73F83b9585fAF" as `0x${string}`,
       fdusd: "0xAceB12E8E2F7126657E290BE382dA2926C1926FA" as `0x${string}`,
-      offeringFactory: "0xe6C3AA4130c4Bf68dACEEE6F1cb8467dF2E262DA" as `0x${string}`,
+      offeringFactory: "0x2f3E26b798B4D7906577F52a65BaA991Ea99C67A" as `0x${string}`,
     },
   },
   56: {

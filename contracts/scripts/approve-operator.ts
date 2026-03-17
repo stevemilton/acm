@@ -9,7 +9,7 @@ import { ethers } from "hardhat";
  * If OPERATOR_ADDRESS is not set, defaults to the deployer wallet.
  */
 
-const FACTORY_ADDRESS = "0xe6C3AA4130c4Bf68dACEEE6F1cb8467dF2E262DA";
+const FACTORY_ADDRESS = "0x2f3E26b798B4D7906577F52a65BaA991Ea99C67A";
 
 async function main() {
   const [deployer] = await ethers.getSigners();

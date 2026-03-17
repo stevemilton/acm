@@ -14,8 +14,9 @@ const FDUSD_TRANSFER_EVENT = parseAbiItem(
   "event Transfer(address indexed from, address indexed to, uint256 value)"
 );
 
-// How many blocks to scan per call (BSC testnet ~3s blocks, 1000 blocks ≈ 50 min)
-const BLOCK_RANGE = BigInt(1000);
+// How many blocks to scan per call (BSC testnet ~3s blocks, 50 blocks ≈ 2.5 min)
+// Kept small to avoid BSC public RPC rate limits on getLogs.
+const BLOCK_RANGE = BigInt(50);
 
 function checkAuth(request: Request): boolean {
   const secret = process.env.INDEXER_SECRET;
@@ -26,7 +27,7 @@ function checkAuth(request: Request): boolean {
 function getViemClient() {
   return createPublicClient({
     chain: bscTestnet,
-    transport: http("https://data-seed-prebsc-1-s1.binance.org:8545"),
+    transport: http("https://bsc-testnet-rpc.publicnode.com"),
   });
 }
 

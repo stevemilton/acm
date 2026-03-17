@@ -66,6 +66,8 @@ Smart Contracts (BNB Chain, Solidity 0.8.20)
 ### `/contracts/` — Hardhat project
 - `contracts/` — Solidity sources
 - `scripts/deploy.ts` — Deployment script
+- `scripts/e2e-cycle.ts` — Full E2E lifecycle on testnet (create → invest → release → distribute → claim)
+- `scripts/approve-operator.ts` — Approve operator wallet on factory
 
 ## Main Flows
 
@@ -92,7 +94,7 @@ Smart Contracts (BNB Chain, Solidity 0.8.20)
    - `/api/indexer/events` — scans contract event logs (Deposited, Released, RevenueReceived), stores in `on_chain_events`, triggers side-effects (upsert shares, update status, insert distributions)
    - `/api/monitor/revenue` — scans FDUSD Transfer events to agent operator wallets, records in `revenue_events` (excludes escrow-originated transfers)
 3. Each sub-endpoint tracks its scan position in `indexer_state` (per contract address)
-4. Block range capped at 1000 blocks per call to avoid RPC rate limits
+4. Block range capped at 50 blocks per call to avoid BSC RPC rate limits; indexer always advances position even on RPC failure
 
 ## Data Model Summary
 
@@ -121,7 +123,7 @@ Key relationship: `offerings` table bridges off-chain and on-chain via `escrow_a
 
 ### Deployed Contracts (BNB Testnet)
 - MockFDUSD: `0xAceB12E8E2F7126657E290BE382dA2926C1926FA`
-- OfferingFactory: `0xe6C3AA4130c4Bf68dACEEE6F1cb8467dF2E262DA`
+- OfferingFactory (v2): `0x2f3E26b798B4D7906577F52a65BaA991Ea99C67A`
 - AgentShare (demo): `0xa8b47e1f450a484c3D40622fB23C1e825A7A25F9`
 - Escrow (demo): `0x0c50cc920489B3FE39670708071c4eC959BA867F`
 - RevenueDistributor (demo): `0x3217ED63cB3ee9758c7b0D1047B73F83b9585fAF`
@@ -134,6 +136,6 @@ Set `NEXT_PUBLIC_CHAIN_ID=56` for mainnet, `97` for testnet. All addresses, RPCs
 1. **Smart contract audit** — Required before mainnet. No audit partner selected.
 2. **Factory operator approval** — Operators must be approved on-chain by factory owner before deploying. No self-serve approval flow yet.
 3. **Indexer reliability** — Depends on external cron. No retry/dead-letter queue.
-4. **BSC testnet RPC** — Single hardcoded RPC endpoint. No fallback.
+4. **BSC testnet RPC** — Indexer uses publicnode.com RPC (Binance seed node rate-limits getLogs). No fallback.
 5. **Revenue verification** — On-chain monitor is passive (watches transfers). No fraud detection beyond escrow-source filtering.
 6. **Supabase RLS** — Policies exist but need audit for completeness.

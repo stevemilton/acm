@@ -4,6 +4,10 @@ import { bscTestnet } from "viem/chains";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ESCROW_EVENTS_ABI, REVENUE_EVENTS_ABI } from "@/lib/contracts";
 
+// BSC testnet RPC rate-limits getLogs aggressively.
+// Cap each scan to MAX_BLOCK_RANGE blocks per cron cycle.
+const MAX_BLOCK_RANGE = BigInt(50);
+
 // Combined ABIs for log parsing
 const ESCROW_FULL_ABI = [...ESCROW_EVENTS_ABI] as const;
 const REVENUE_FULL_ABI = [...REVENUE_EVENTS_ABI] as const;
@@ -106,15 +110,27 @@ async function processEscrowEvents(
     return { indexed: 0, highestBlock: latestBlock };
   }
 
-  const logs = await viemClient.getContractEvents({
-    address: escrowAddress,
-    abi: ESCROW_FULL_ABI,
-    fromBlock,
-    toBlock: latestBlock,
-  });
+  // Cap block range to avoid BSC RPC rate limits
+  const toBlock = fromBlock + MAX_BLOCK_RANGE < latestBlock
+    ? fromBlock + MAX_BLOCK_RANGE
+    : latestBlock;
+
+  let logs;
+  try {
+    logs = await viemClient.getContractEvents({
+      address: escrowAddress,
+      abi: ESCROW_FULL_ABI,
+      fromBlock,
+      toBlock,
+    });
+  } catch (rpcErr) {
+    // RPC rate limit — do NOT advance position so we retry this range next cycle
+    console.error(`Escrow getLogs failed (${escrowAddress}): ${rpcErr instanceof Error ? rpcErr.message : "unknown"}`);
+    return { indexed: 0, highestBlock: fromBlock - BigInt(1) };
+  }
 
   let indexed = 0;
-  let highestBlock = fromBlock - BigInt(1);
+  let highestBlock = toBlock;
 
   for (const log of logs) {
     if (log.blockNumber && log.blockNumber > highestBlock) {
@@ -154,9 +170,8 @@ async function processEscrowEvents(
     }
   }
 
-  if (indexed > 0) {
-    await updateIndexerState(supabase, escrowAddress, highestBlock, indexed);
-  }
+  // Always advance indexer position so it progresses through block range
+  await updateIndexerState(supabase, escrowAddress, highestBlock, indexed);
 
   return { indexed, highestBlock };
 }
@@ -174,15 +189,27 @@ async function processRevenueEvents(
     return { indexed: 0, highestBlock: latestBlock };
   }
 
-  const logs = await viemClient.getContractEvents({
-    address: distributorAddress,
-    abi: REVENUE_FULL_ABI,
-    fromBlock,
-    toBlock: latestBlock,
-  });
+  // Cap block range to avoid BSC RPC rate limits
+  const toBlock = fromBlock + MAX_BLOCK_RANGE < latestBlock
+    ? fromBlock + MAX_BLOCK_RANGE
+    : latestBlock;
+
+  let logs;
+  try {
+    logs = await viemClient.getContractEvents({
+      address: distributorAddress,
+      abi: REVENUE_FULL_ABI,
+      fromBlock,
+      toBlock,
+    });
+  } catch (rpcErr) {
+    // RPC rate limit — do NOT advance position so we retry this range next cycle
+    console.error(`Revenue getLogs failed (${distributorAddress}): ${rpcErr instanceof Error ? rpcErr.message : "unknown"}`);
+    return { indexed: 0, highestBlock: fromBlock - BigInt(1) };
+  }
 
   let indexed = 0;
-  let highestBlock = fromBlock - BigInt(1);
+  let highestBlock = toBlock;
 
   for (const log of logs) {
     if (log.blockNumber && log.blockNumber > highestBlock) {
@@ -220,9 +247,8 @@ async function processRevenueEvents(
     }
   }
 
-  if (indexed > 0) {
-    await updateIndexerState(supabase, distributorAddress, highestBlock, indexed);
-  }
+  // Always advance indexer position so it progresses through block range
+  await updateIndexerState(supabase, distributorAddress, highestBlock, indexed);
 
   return { indexed, highestBlock };
 }
@@ -234,7 +260,7 @@ export async function POST(request: Request) {
 
   const viemClient = createPublicClient({
     chain: bscTestnet,
-    transport: http("https://data-seed-prebsc-1-s1.binance.org:8545"),
+    transport: http("https://bsc-testnet-rpc.publicnode.com"),
   });
 
   const supabase = createClient(
