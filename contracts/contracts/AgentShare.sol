@@ -12,7 +12,7 @@ contract AgentShare is ERC20, Ownable {
     string public agentId;
 
     /// @notice Revenue share percentage (basis points, e.g. 1000 = 10%)
-    uint256 public revenueShareBps;
+    uint256 public immutable revenueShareBps;
 
     /// @notice Whether transfers are enabled (disabled in v1 — no secondary market)
     bool public transfersEnabled;

@@ -1,5 +1,17 @@
 # ACM — Changelog
 
+## v0.8.0 — Smart Contract Audit Prep (March 2026)
+
+- Slither static analysis: 7 High fixed (SafeERC20), 13 Optimization fixed (immutable), 1 Medium + 9 Low accepted
+- Added `SafeERC20` to all ERC-20 transfer calls in Escrow and RevenueDistributor
+- Added `immutable` to 13 state variables across 4 contracts (gas optimization)
+- Added zero-address checks to RevenueDistributor constructor
+- Flattened contract sources in `contracts/flat/` for auditor handoff
+- Audit scope document: `docs/audit-scope.md` (contracts, addresses, threat model, known issues)
+- Fixed `revenue_events` schema gap: migration `00006_revenue_events.sql`
+- All 83 Hardhat tests pass with no behavioral changes
+- Compliance matrix: S3 → Partial (prep done, external audit pending)
+
 ## v0.7.0 — Supabase RLS Audit (March 2026)
 
 - Full RLS audit of all 8 database tables

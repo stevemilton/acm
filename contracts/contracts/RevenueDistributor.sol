@@ -2,17 +2,20 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./AgentShare.sol";
 
 /// @title RevenueDistributor — Splits agent revenue between platform, operator, and shareholders
 /// @notice 5% platform fee, remainder split per revenue share agreement
 contract RevenueDistributor is Ownable {
-    IERC20 public paymentToken;
-    AgentShare public shareToken;
+    using SafeERC20 for IERC20;
 
-    address public platformWallet;
-    address public operatorWallet;
+    IERC20 public immutable paymentToken;
+    AgentShare public immutable shareToken;
+
+    address public immutable platformWallet;
+    address public immutable operatorWallet;
 
     uint256 public constant PLATFORM_FEE_BPS = 500; // 5%
     uint256 public constant BPS_DENOMINATOR = 10000;
@@ -31,6 +34,8 @@ contract RevenueDistributor is Ownable {
         address _platformWallet,
         address _operatorWallet
     ) Ownable(_operatorWallet) {
+        require(_platformWallet != address(0), "Invalid platform wallet");
+        require(_operatorWallet != address(0), "Invalid operator wallet");
         paymentToken = IERC20(_paymentToken);
         shareToken = AgentShare(_shareToken);
         platformWallet = _platformWallet;
@@ -39,7 +44,7 @@ contract RevenueDistributor is Ownable {
 
     /// @notice Distribute revenue for a period
     function distribute(uint256 grossRevenue) external onlyOwner {
-        paymentToken.transferFrom(msg.sender, address(this), grossRevenue);
+        paymentToken.safeTransferFrom(msg.sender, address(this), grossRevenue);
 
         uint256 platformFee = (grossRevenue * PLATFORM_FEE_BPS) / BPS_DENOMINATOR;
         uint256 afterFee = grossRevenue - platformFee;
@@ -49,10 +54,10 @@ contract RevenueDistributor is Ownable {
         uint256 operatorAmount = afterFee - investorAmount;
 
         // Platform fee
-        paymentToken.transfer(platformWallet, platformFee);
+        paymentToken.safeTransfer(platformWallet, platformFee);
 
         // Operator share
-        paymentToken.transfer(operatorWallet, operatorAmount);
+        paymentToken.safeTransfer(operatorWallet, operatorAmount);
 
         // Update cumulative revenue per token for investors
         uint256 totalShares = shareToken.totalSupply() - shareToken.balanceOf(address(shareToken));
@@ -76,7 +81,7 @@ contract RevenueDistributor is Ownable {
         lastClaimedCumulative[msg.sender] = cumulativeRevenuePerToken;
         pendingClaims[msg.sender] = 0;
 
-        paymentToken.transfer(msg.sender, owed);
+        paymentToken.safeTransfer(msg.sender, owed);
 
         emit InvestorClaimed(msg.sender, owed);
     }

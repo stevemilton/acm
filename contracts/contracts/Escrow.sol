@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./AgentShare.sol";
 
@@ -9,13 +10,15 @@ import "./AgentShare.sol";
 /// @notice Manages the lifecycle of an agent share offering:
 ///         deposit → (min met? release : refund)
 contract Escrow is Ownable {
-    IERC20 public paymentToken; // FDUSD / USDC / USDT
-    AgentShare public shareToken;
+    using SafeERC20 for IERC20;
 
-    uint256 public minRaise;
-    uint256 public maxRaise;
-    uint256 public pricePerShare;
-    uint256 public deadline;
+    IERC20 public immutable paymentToken; // FDUSD / USDC / USDT
+    AgentShare public immutable shareToken;
+
+    uint256 public immutable minRaise;
+    uint256 public immutable maxRaise;
+    uint256 public immutable pricePerShare;
+    uint256 public immutable deadline;
     uint256 public totalRaised;
 
     enum Status { Open, Funded, Refunding }
@@ -52,7 +55,7 @@ contract Escrow is Ownable {
         require(block.timestamp < deadline, "Deadline passed");
         require(totalRaised + amount <= maxRaise, "Exceeds max raise");
 
-        paymentToken.transferFrom(msg.sender, address(this), amount);
+        paymentToken.safeTransferFrom(msg.sender, address(this), amount);
         deposits[msg.sender] += amount;
         totalRaised += amount;
 
@@ -71,7 +74,7 @@ contract Escrow is Ownable {
         require(totalRaised >= minRaise, "Min raise not met");
 
         status = Status.Funded;
-        paymentToken.transfer(owner(), totalRaised);
+        paymentToken.safeTransfer(owner(), totalRaised);
 
         emit Released(totalRaised);
     }
@@ -100,7 +103,7 @@ contract Escrow is Ownable {
             shareToken.returnShares(msg.sender, shares);
         }
 
-        paymentToken.transfer(msg.sender, amount);
+        paymentToken.safeTransfer(msg.sender, amount);
 
         emit Refunded(msg.sender, amount);
     }

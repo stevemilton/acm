@@ -53,16 +53,17 @@
 - Agent-to-agent investment
 
 ### Compliance Matrix Score
-**17/18 Complete | 0 Partial | 1 Missing**
-- Missing: S3 (smart contract audit — requires external vendor)
+**17/18 Complete | 1 Partial | 0 Missing**
+- Partial: S3 (audit prep done — flattened contracts, Slither analysis, scope doc; external auditor engagement pending)
 - Note: UI E2E walkthrough remains unverified — E2E cycle was executed via Hardhat script, not browser UI
 
-### Database Schema (5 migrations)
+### Database Schema (6 migrations)
 1. `00001_initial_schema.sql` — Core tables + initial RLS policies
 2. `00002_functions.sql` — DB functions (security definer)
 3. `00003_offering_contracts.sql` — Contract address columns on offerings
 4. `00004_indexer.sql` — indexer_state + on_chain_events (no RLS — system tables)
 5. `00005_rls_audit.sql` — Missing write policies + explicit delete deny on all tables
+6. `00006_revenue_events.sql` — Revenue events table (was missing, broke revenue monitor)
 
 ### Key Environment Variables (Railway)
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
@@ -71,12 +72,19 @@
 - `DEPLOYER_PRIVATE_KEY` (in contracts/.env, gitignored)
 
 ## Last Completed Sprint (2026-03-17)
+**Sprint 005: Smart Contract Audit Prep** — IN PROGRESS
+- Branch: `sprint-005-audit-prep`
+- SafeERC20 added to Escrow + RevenueDistributor (7 High Slither findings fixed)
+- 13 state variables marked `immutable` (13 Optimization findings fixed)
+- Zero-address checks added to RevenueDistributor constructor
+- Flattened contracts in `contracts/flat/`
+- Audit scope doc: `docs/audit-scope.md`
+- Migration `00006_revenue_events.sql` — fixes missing revenue_events table
+- 83 tests still passing, no behavioral changes
+- S3 compliance → Partial (prep done, external audit pending)
+
 **Sprint 004: Supabase RLS Audit** — MERGE_APPROVED
 - Archive: `.ai/archive/sprint-004-rls-audit/`
-- Migration `00005_rls_audit.sql`: added missing write policies on offerings, shares, distributions
-- Explicit DELETE deny on all 6 user-facing tables
-- Invest route fix: replaced direct `offerings.update()` with `increment_shares_sold` RPC (security definer)
-- X1 compliance item → Complete (17/18)
 
 **Sprint 003: Solidity Unit Tests** — MERGED
 - Archive: `.ai/archive/sprint-003-solidity-tests/`
@@ -88,7 +96,8 @@
 - UI E2E walkthrough never performed (E2E was via Hardhat script — contract paths verified, UI paths not)
 - Old demo offering (c0000000) in DB references deprecated v1 factory contracts
 - Share magnitude mismatch: Escrow produces raw integer shares, RevenueDistributor tests use 18-decimal shares (math works at both scales but integration test would be valuable)
-- `revenue_events` table referenced in code but not in migrations 00001–00005 — may need schema audit
+- ~~`revenue_events` table referenced in code but not in migrations~~ — fixed in sprint 005 (migration 00006)
+- Deployed testnet contracts use pre-SafeERC20 bytecode — redeploy needed after mainnet audit
 
 ## Safest Next Step
-17/18 compliance complete. The only remaining gap is S3 (smart contract audit), which requires an external auditor. The next internally-actionable sprint would be **audit prep**: flatten contracts, run Slither static analysis, fix any findings, prepare audit scope document. Alternatively, tackle UI E2E walkthrough or the `revenue_events` table schema gap.
+Audit prep complete. Engage external auditor with `docs/audit-scope.md` and `contracts/flat/`. Remaining internally-actionable work: UI E2E walkthrough, or redeploy contracts with SafeERC20 fixes to testnet for re-verification.

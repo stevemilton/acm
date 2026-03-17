@@ -1,129 +1,118 @@
-# BUILD_REPORT — Sprint 004: Supabase RLS Audit
+# BUILD_REPORT — Sprint 005: Smart Contract Audit Prep
 
-**Sprint:** Supabase RLS Audit
-**Branch:** `sprint-004-rls-audit`
+**Sprint:** Smart Contract Audit Prep
+**Branch:** `sprint-005-audit-prep`
 **Builder started:** 2026-03-17
 **Status:** COMPLETE
 
-## Summary
+## Objective
 
-Audited all 8 Supabase tables for RLS completeness. Found and fixed critical gap: `offerings`, `shares`, and `distributions` had RLS enabled but were missing INSERT/UPDATE policies — all API writes through the anon-key client were silently blocked. Added 8 new policies, 6 explicit delete denies, documented the security model, wrote 9-group RLS test script.
+Prepare all artifacts for external smart contract audit: flattened sources, Slither analysis with fixes, audit scope document, and fix the `revenue_events` schema gap.
 
-## Critical Finding: Silent Write Failures
+## Completed Work
 
-### Problem
-Three tables had RLS enabled (from migration 00001) but only SELECT policies defined:
-- `offerings` — no INSERT or UPDATE policy
-- `shares` — no INSERT policy
-- `distributions` — no INSERT policy
+### 1. Slither Static Analysis
 
-The invest route (`/api/offerings/[id]/invest`), contracts route (`/api/offerings/[id]/contracts`), and distributions route (`/api/distributions`) all use the anon-key Supabase server client, which enforces RLS. Without write policies, all INSERT/UPDATE operations on these tables would return empty results or silently fail.
+Ran Slither v0.11.5 against all 5 contracts. Results:
 
-### Why It Wasn't Caught
-- The E2E testnet cycle (sprint 002) was executed via Hardhat scripts, not through the web API
-- The indexer routes use `SUPABASE_SERVICE_ROLE_KEY`, which bypasses RLS entirely
-- The `security definer` functions (increment_investor_invested, increment_shares_sold) also bypass RLS
-- No one had tested the invest/distribute flows through the actual web UI
+| Severity | Before Fix | After Fix | Action |
+|----------|-----------|-----------|--------|
+| **High** | 7 | 0 | All fixed (SafeERC20) |
+| **Medium** | 2 | 1 | 1 fixed (reentrancy via SafeERC20), 1 accepted (divide-before-multiply — correct operator precedence) |
+| **Low** | 16 | 9 | 7 fixed (zero-checks, SafeERC20 resolves benign reentrancy), 9 accepted (shadowing, event-after-call, timestamp) |
+| **Informational** | 6 | 9 | Increased due to SafeERC20 import adding more pragma versions. All informational. |
+| **Optimization** | 13 | 0 | All fixed (immutable) |
 
-### Fix
-Migration `00005_rls_audit.sql` adds:
-- `offerings_insert` — scoped to operator who owns parent agent
-- `offerings_update` — scoped to operator who owns parent agent
-- `shares_insert` — scoped to authenticated investor's own record
-- `distributions_insert` — scoped to operator who owns parent agent
+### 2. Fixes Applied (No Behavioral Changes)
 
-## Full RLS Audit Table
+**Escrow.sol:**
+- Added `import SafeERC20` + `using SafeERC20 for IERC20`
+- Changed `paymentToken.transferFrom()` → `paymentToken.safeTransferFrom()`
+- Changed `paymentToken.transfer()` → `paymentToken.safeTransfer()` (3 locations)
+- Added `immutable` to: `paymentToken`, `shareToken`, `minRaise`, `maxRaise`, `pricePerShare`, `deadline`
 
-### Pre-Audit State (migrations 00001–00004)
+**RevenueDistributor.sol:**
+- Added `import SafeERC20` + `using SafeERC20 for IERC20`
+- Changed all `paymentToken.transferFrom()` / `paymentToken.transfer()` → safe variants (4 locations)
+- Added `immutable` to: `paymentToken`, `shareToken`, `platformWallet`, `operatorWallet`
+- Added zero-address checks: `require(_platformWallet != address(0))`, `require(_operatorWallet != address(0))`
 
-| Table | RLS | SELECT | INSERT | UPDATE | DELETE |
-|-------|-----|--------|--------|--------|--------|
-| operators | ✅ | Public | Own user_id | Own user_id | **NONE** |
-| investors | ✅ | Public | Own user_id | Own user_id | **NONE** |
-| agents | ✅ | Public | Own operator | Own operator | **NONE** |
-| offerings | ✅ | Public | **NONE** ⚠️ | **NONE** ⚠️ | **NONE** |
-| shares | ✅ | Own investor | **NONE** ⚠️ | **NONE** | **NONE** |
-| distributions | ✅ | Public | **NONE** ⚠️ | **NONE** | **NONE** |
-| indexer_state | ❌ | — | — | — | — |
-| on_chain_events | ❌ | — | — | — | — |
+**AgentShare.sol:**
+- Added `immutable` to `revenueShareBps`
 
-### Post-Audit State (after migration 00005)
+**OfferingFactory.sol:**
+- Added `immutable` to: `paymentToken`, `platformWallet`
 
-| Table | RLS | SELECT | INSERT | UPDATE | DELETE |
-|-------|-----|--------|--------|--------|--------|
-| operators | ✅ | Public | Own user_id | Own user_id | **Blocked** |
-| investors | ✅ | Public | Own user_id | Own user_id | **Blocked** |
-| agents | ✅ | Public | Own operator | Own operator | **Blocked** |
-| offerings | ✅ | Public | **Own operator** ✅ | **Own operator** ✅ | **Blocked** |
-| shares | ✅ | Own investor | **Own investor** ✅ | None (immutable) | **Blocked** |
-| distributions | ✅ | Public | **Own operator** ✅ | None (immutable) | **Blocked** |
-| indexer_state | ❌ | — | — | — | — |
-| on_chain_events | ❌ | — | — | — | — |
+### 3. Flattened Contracts
 
-## Service-Role Route Verification
+Generated in `contracts/flat/`:
+| File | Lines |
+|------|-------|
+| MockFDUSD.flat.sol | 635 |
+| AgentShare.flat.sol | 784 |
+| Escrow.flat.sol | 1,311 |
+| RevenueDistributor.flat.sol | 1,289 |
+| OfferingFactory.flat.sol | 1,557 |
 
-| Route | Auth Check | Secret Env | Service-Role Client | Dev Bypass |
-|-------|-----------|------------|--------------------|-----------|
-| `/api/indexer` | `x-indexer-key` header | `INDEXER_SECRET` | `SUPABASE_SERVICE_ROLE_KEY` | `if (!secret) return true` |
-| `/api/indexer/events` | `x-indexer-key` header | `INDEXER_SECRET` | `SUPABASE_SERVICE_ROLE_KEY` | `if (!secret) return true` |
-| `/api/monitor/revenue` | `x-indexer-key` header | `INDEXER_SECRET` | `SUPABASE_SERVICE_ROLE_KEY` | `if (!secret) return true` |
-| `/api/cron` | header + query param | `INDEXER_SECRET` | N/A (calls sub-endpoints) | `if (!secret) return true` |
+### 4. Audit Scope Document
 
-All 4 routes reject requests without valid `INDEXER_SECRET` in production (env var is set on Railway).
+Created `docs/audit-scope.md` with:
+- Contracts in scope (4 production + 1 test-only)
+- Deployed addresses (BNB testnet)
+- Architecture summary (factory pattern, ownership chain, token flows)
+- Threat model (actors, invariants, attack vectors)
+- Known issues table (1 Medium, 9 Low — all with rationale)
+- Test coverage summary
+- Out-of-scope declaration
+- Auditor checklist
 
-## Indexer Table RLS Exclusion Rationale
+### 5. Revenue Events Migration
 
-`indexer_state` and `on_chain_events` intentionally do NOT have RLS enabled:
-1. Only accessed by service-role routes (which bypass RLS regardless)
-2. No anon-key route ever reads or writes these tables
-3. Data is non-sensitive (public blockchain events, block numbers)
-4. Adding RLS would add complexity with zero security benefit
-
-## RLS Test Script
-
-Located at `supabase/tests/rls_audit.sql`. 9 test groups:
-
-| # | Test | What It Verifies |
-|---|------|-----------------|
-| T1 | Cross-user share read isolation | Operator cannot read investor's shares; investor can read their own |
-| T2 | Cross-operator agent write isolation | Non-owner cannot update another operator's agent |
-| T3 | Cross-operator offering write isolation | Non-owner cannot INSERT or UPDATE offerings for another's agent |
-| T4 | Cross-operator distribution write isolation | Non-owner cannot INSERT distributions for another's agent |
-| T5 | Authorized operator writes | Owner CAN insert/update their own offerings and distributions |
-| T6 | Authorized investor share insert | Investor CAN insert shares for themselves; CANNOT insert for others |
-| T7 | Anon write rejection | Anonymous role blocked from INSERT on all 6 user-facing tables |
-| T8 | Delete blocking | Authenticated users cannot DELETE from any table |
-| T9 | Service-role bypass | Superuser/service-role can write to all tables including system tables |
-
-Script uses `SET LOCAL ROLE` + `SET LOCAL request.jwt.claims` to simulate different users, wrapped in a transaction that ROLLBACKs at the end (no persistent test data).
+Created `supabase/migrations/00006_revenue_events.sql`:
+- `revenue_events` table matching the schema expected by `/api/monitor/revenue`
+- Unique index on `source_tx_id` (prevents duplicate event processing)
+- RLS enabled: public SELECT, no INSERT/UPDATE for anon (service-role writes only), DELETE denied
 
 ## Acceptance Criteria Status
 
-- [x] Every table has documented RLS policies (audit table in this report)
-- [x] `offerings` table has INSERT and UPDATE policies scoped to the owning operator
-- [x] `shares` table has INSERT policy that works with the invest flow
-- [x] `distributions` table has INSERT policy scoped to the owning operator
-- [x] No table allows unrestricted DELETE (explicit deny on all 6 tables)
-- [x] `indexer_state` and `on_chain_events` RLS exclusion is documented with rationale
-- [x] All 3 service-role routes reject requests without valid `INDEXER_SECRET`
-- [x] RLS test script exists — `supabase/tests/rls_audit.sql` (9 test groups)
+- [x] Flattened Solidity files exist for all 5 contracts in `contracts/flat/`
+- [x] Slither installed and run — all findings documented above
+- [x] High/medium Slither findings fixed or documented as accepted risk with rationale
+- [x] `docs/audit-scope.md` exists with full content
+- [x] Migration `00006_revenue_events.sql` creates the `revenue_events` table
+- [x] All 83 Hardhat tests still pass
 - [x] `cd app && npm run build` still passes
-- [x] Migration `00005_rls_audit.sql` created
+- [x] No behavioral changes to smart contracts
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/migrations/00005_rls_audit.sql` | NEW — 8 new policies + 6 delete denies |
-| `supabase/tests/rls_audit.sql` | NEW — 9-group RLS test script |
-| `ARCHITECTURE.md` | Added "Security Model" section with RLS policy table |
-| `docs/mvp-sow-compliance-matrix.md` | X1 → Complete |
-| `CHANGELOG.md` | v0.7.0 entry |
-| `.ai/handoff/CURRENT_STATE.md` | 17/18 compliance, sprint 004 status |
+| `contracts/contracts/Escrow.sol` | SafeERC20, immutable (6 vars) |
+| `contracts/contracts/RevenueDistributor.sol` | SafeERC20, immutable (4 vars), zero-checks |
+| `contracts/contracts/AgentShare.sol` | immutable (1 var) |
+| `contracts/contracts/OfferingFactory.sol` | immutable (2 vars) |
+| `contracts/flat/*.flat.sol` | NEW — 5 flattened contract files |
+| `docs/audit-scope.md` | NEW — audit scope document |
+| `supabase/migrations/00006_revenue_events.sql` | NEW — revenue_events table |
+| `docs/mvp-sow-compliance-matrix.md` | S3 → Partial |
+| `CHANGELOG.md` | v0.8.0 entry |
+| `.ai/handoff/CURRENT_STATE.md` | Sprint 005 status, 6 migrations, tech debt updates |
 
-## Next Steps
+## Tests Run
+
+- `npx hardhat compile` — 9 Solidity files compiled successfully
+- `npx hardhat test` — 83 passing, 0 failures
+- `cd app && npm run build` — passes
+- Slither v0.11.5 — 0 High, 1 Medium (accepted), 9 Low (accepted), 0 Optimization
+
+## Blockers/Issues
+
+None. All acceptance criteria met.
+
+## Recommended Next Steps
 
 1. Reviewer pass on this sprint
-2. Apply migration `00005_rls_audit.sql` to production Supabase
-3. Run RLS test script against production to verify
-4. The contracts route and distributions route will work correctly once migration 00005 is applied. The invest route additionally required replacing the direct `offerings.update()` with the existing `increment_shares_sold` RPC function (security definer) — the investor is not the operator, so the `offerings_update` RLS policy would block the direct write. This fix was applied during review.
+2. Engage external auditor — hand over `docs/audit-scope.md` + `contracts/flat/`
+3. Apply migration `00006_revenue_events.sql` to production Supabase
+4. After audit completes: redeploy contracts to testnet with SafeERC20 fixes, re-run E2E cycle

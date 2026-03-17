@@ -11,8 +11,8 @@ import "./RevenueDistributor.sol";
 ///         and wires them together with correct ownership.
 contract OfferingFactory is Ownable {
     // ── Immutable config ────────────────────────────────────────────────
-    address public paymentToken; // FDUSD (or mock on testnet)
-    address public platformWallet;
+    address public immutable paymentToken; // FDUSD (or mock on testnet)
+    address public immutable platformWallet;
 
     // ── Offering registry ───────────────────────────────────────────────
     struct Offering {

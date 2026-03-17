@@ -34,7 +34,7 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 |---|-------------|--------|-----------------|
 | S1 | Hardhat unit tests for all contracts | Complete | 83 tests across 5 contracts (MockFDUSD, AgentShare, Escrow, RevenueDistributor, OfferingFactory). All pass. Happy paths, reverts, access control, multi-investor scenarios covered. |
 | S2 | Factory operator approval script | Complete | `contracts/scripts/approve-operator.ts` created and executed. Deployer `0x598B...0260` approved on OfferingFactory. Verified via Hardhat console. |
-| S3 | Smart contract audit | Missing | Pre-mainnet gate. Not started. |
+| S3 | Smart contract audit | Partial | Audit prep complete (sprint 005): Slither static analysis run — 7 High fixed (SafeERC20), 13 Optimization fixed (immutable), 1 Medium + 9 Low accepted with rationale. Flattened sources in `contracts/flat/`. Audit scope doc at `docs/audit-scope.md`. 83 tests passing. **Pending:** External auditor engagement. |
 
 ## Security
 
