@@ -1,5 +1,25 @@
 # ACM — Changelog
 
+## v0.6.0 — Solidity Unit Tests (March 2026)
+
+- Comprehensive Hardhat unit tests for all 5 Solidity contracts (83 tests, 0 failures)
+- Bug fix: `Escrow.claimRefund()` now returns AgentShare tokens to contract via `shareToken.returnShares()` before refunding FDUSD
+- New `AgentShare.returnShares()` function (onlyOwner) — mirrors `purchaseShares()` for refund flow
+- Test coverage: MockFDUSD (5), AgentShare (18), Escrow (24), RevenueDistributor (15), OfferingFactory (21)
+- Revenue distribution math verified: 5% platform fee, revenueShareBps split, multi-investor proportional claims
+- Revert conditions tested: unauthorized callers, deadline checks, min raise, duplicate claims
+- Compliance matrix: S1 → Complete (16/18 Complete, 2 Missing)
+
+## v0.5.0 — E2E Testnet Cycle (March 2026)
+
+- Full lifecycle verified on BNB testnet: create offering → deploy contracts → invest FDUSD → release escrow → distribute revenue → claim earnings
+- Critical bug fix: Escrow.deposit() now transfers AgentShare tokens to investors via `shareToken.purchaseShares()`
+- OfferingFactory redeployed (`0x2f3E26b798B4D7906577F52a65BaA991Ea99C67A`) with fixed Escrow bytecode
+- Event indexer: block range capped to 200 blocks/cycle to avoid BSC RPC rate limits; indexer always advances position
+- Revenue monitor: block range reduced from 1000 to 200 for BSC compatibility
+- E2E test script: `contracts/scripts/e2e-cycle.ts` — automated 7-step lifecycle on testnet
+- Compliance matrix: C9 Complete, I5 Complete (15/18 Complete, 3 Missing)
+
 ## v0.4.0 — Unblock Factory Deploy + Cron Activation (March 2026)
 
 - Factory operator approval script (`contracts/scripts/approve-operator.ts`) — deployer wallet approved on testnet

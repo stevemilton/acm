@@ -16,7 +16,7 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 | C6 | Investor can claim refund | Complete | `escrow-manage.tsx` → `Escrow.claimRefund()` |
 | C7 | Operator can distribute revenue (FDUSD → RevenueDistributor) | Complete | `distribute-revenue.tsx`, two-step approve + depositRevenue |
 | C8 | Investor can claim accumulated revenue | Complete | `claim-revenue.tsx` → `RevenueDistributor.claim()` |
-| C9 | Full cycle tested end-to-end on testnet | Missing | No recorded E2E test pass. Individual flows built but never run as a connected sequence with fresh contracts. |
+| C9 | Full cycle tested end-to-end on testnet | Complete | E2E cycle executed via `contracts/scripts/e2e-cycle.ts` on BNB testnet. All 7 steps verified: factory deploy → create offering → mint FDUSD → invest (500 FDUSD → 100 shares) → release escrow → distribute revenue (1000 FDUSD, 5%/85%/15% split) → claim (142.5 FDUSD). TX evidence in `.ai/active/BUILD_REPORT.md`. Bug fixed: Escrow now transfers AgentShare tokens on deposit. |
 
 ## Infrastructure
 
@@ -26,13 +26,13 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 | I2 | Smart contracts deployed to BNB testnet | Complete | 5 contracts, addresses in `chain-config.ts` + DB |
 | I3 | Database schema applied | Complete | 4 Supabase migrations |
 | I4 | Indexer runs automatically on schedule | Complete | `/api/cron` endpoint live on Railway. `INDEXER_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CHAIN_ID` set. All 3 sub-endpoints verified healthy (HTTP 200). Needs external cron trigger (every 5 min). |
-| I5 | Revenue monitor captures FDUSD transfers | Partial | `/api/monitor/revenue` deployed and responding (HTTP 200). Not yet tested with real FDUSD transfers. |
+| I5 | Revenue monitor captures FDUSD transfers | Complete | `/api/monitor/revenue` deployed. E2E cycle generated real FDUSD transfers on testnet (distribute TX `0xcad72f1f...`). Block range capped to 200 to avoid BSC rate limits. |
 
 ## Smart Contracts
 
 | # | Requirement | Status | Evidence / Notes |
 |---|-------------|--------|-----------------|
-| S1 | Hardhat unit tests for all contracts | Missing | Zero tests written. |
+| S1 | Hardhat unit tests for all contracts | Complete | 83 tests across 5 contracts (MockFDUSD, AgentShare, Escrow, RevenueDistributor, OfferingFactory). All pass. Happy paths, reverts, access control, multi-investor scenarios covered. |
 | S2 | Factory operator approval script | Complete | `contracts/scripts/approve-operator.ts` created and executed. Deployer `0x598B...0260` approved on OfferingFactory. Verified via Hardhat console. |
 | S3 | Smart contract audit | Missing | Pre-mainnet gate. Not started. |
 

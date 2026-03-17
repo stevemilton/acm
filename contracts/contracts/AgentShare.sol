@@ -40,6 +40,11 @@ contract AgentShare is ERC20, Ownable {
         _transfer(address(this), investor, amount);
     }
 
+    /// @notice Return shares during refund (called by Escrow contract)
+    function returnShares(address investor, uint256 amount) external onlyOwner {
+        _transfer(investor, address(this), amount);
+    }
+
     /// @notice Toggle secondary market transfers (v2)
     function setTransfersEnabled(bool _enabled) external onlyOwner {
         transfersEnabled = _enabled;

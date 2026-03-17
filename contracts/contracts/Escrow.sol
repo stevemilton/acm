@@ -59,6 +59,9 @@ contract Escrow is Ownable {
         uint256 shares = amount / pricePerShare;
         sharesPurchased[msg.sender] += shares;
 
+        // Transfer AgentShare tokens to investor
+        shareToken.purchaseShares(msg.sender, shares);
+
         emit Deposited(msg.sender, amount, shares);
     }
 
@@ -88,8 +91,15 @@ contract Escrow is Ownable {
         uint256 amount = deposits[msg.sender];
         require(amount > 0, "Nothing to refund");
 
+        uint256 shares = sharesPurchased[msg.sender];
         deposits[msg.sender] = 0;
         sharesPurchased[msg.sender] = 0;
+
+        // Return AgentShare tokens to the contract before refunding FDUSD
+        if (shares > 0) {
+            shareToken.returnShares(msg.sender, shares);
+        }
+
         paymentToken.transfer(msg.sender, amount);
 
         emit Refunded(msg.sender, amount);

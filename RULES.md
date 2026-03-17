@@ -23,6 +23,8 @@ Durable rules for AI-assisted development. Keep this short.
 - **`indexer_state` tracks scan position per contract.** Never re-process already-indexed blocks.
 - **When adding a new contract to the indexer, seed its `indexer_state` row with a recent block number.** Never start from block 0 — BSC public RPC rate-limits full-chain log scans.
 - **Duplicate events are handled via unique constraint on `tx_hash`** in `on_chain_events`. Upsert/ignore on conflict.
+- **Indexer block range is capped at 50 blocks per cron cycle.** BSC public RPC rate-limits `getLogs` aggressively. On RPC failure the indexer retries the same range next cycle (never skips events). Do not increase this cap without testing against BSC testnet RPC.
+- **Use `bsc-testnet-rpc.publicnode.com` for indexer RPC**, not the Binance seed node. The Binance `data-seed-prebsc-1-s1` endpoint aggressively rate-limits `getLogs` even for small ranges.
 
 ## Process Rules
 
@@ -37,3 +39,4 @@ Durable rules for AI-assisted development. Keep this short.
 - **Revenue share only, never equity.** This is a participation agreement, not ownership transfer.
 - **No speculative features in v1.** No bonding curves, no AMM, no secondary market.
 - **5% platform fee is hardcoded in RevenueDistributor.** Change requires contract redeployment.
+- **Escrow share math produces raw integers, not 18-decimal values.** `shares = amount / pricePerShare` divides two 18-decimal values (e.g., 500e18 / 5e18 = 100, not 100e18). Tests and downstream contracts must use raw integer share counts when referencing Escrow-originated shares.
