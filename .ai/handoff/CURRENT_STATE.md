@@ -72,16 +72,8 @@
 - `DEPLOYER_PRIVATE_KEY` (in contracts/.env, gitignored)
 
 ## Last Completed Sprint (2026-03-17)
-**Sprint 005: Smart Contract Audit Prep** — COMPLETE
-- Branch: `sprint-005-audit-prep`
-- SafeERC20 added to Escrow + RevenueDistributor (7 High Slither findings fixed)
-- 13 state variables marked `immutable` (13 Optimization findings fixed)
-- Zero-address checks added to RevenueDistributor constructor
-- Flattened contracts in `contracts/flat/`
-- Audit scope doc: `docs/audit-scope.md`
-- Migration `00006_revenue_events.sql` — fixes missing revenue_events table
-- 83 tests still passing, no behavioral changes
-- S3 compliance → Partial (prep done, external audit pending)
+**Sprint 005: Smart Contract Audit Prep** — MERGE_APPROVED
+- Archive: `.ai/archive/sprint-005-audit-prep/`
 
 **Sprint 004: Supabase RLS Audit** — MERGE_APPROVED
 - Archive: `.ai/archive/sprint-004-rls-audit/`

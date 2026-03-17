@@ -24,7 +24,7 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 |---|-------------|--------|-----------------|
 | I1 | App deployed and accessible | Complete | Railway: `https://perfect-forgiveness-production-fd63.up.railway.app/` |
 | I2 | Smart contracts deployed to BNB testnet | Complete | 5 contracts, addresses in `chain-config.ts` + DB |
-| I3 | Database schema applied | Complete | 4 Supabase migrations |
+| I3 | Database schema applied | Complete | 6 Supabase migrations (00001–00006) |
 | I4 | Indexer runs automatically on schedule | Complete | `/api/cron` endpoint live on Railway. `INDEXER_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CHAIN_ID` set. All 3 sub-endpoints verified healthy (HTTP 200). Needs external cron trigger (every 5 min). |
 | I5 | Revenue monitor captures FDUSD transfers | Complete | `/api/monitor/revenue` deployed. E2E cycle generated real FDUSD transfers on testnet (distribute TX `0xcad72f1f...`). Block range capped to 200 to avoid BSC rate limits. |
 
