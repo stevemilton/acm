@@ -21,12 +21,13 @@ Durable rules for AI-assisted development. Keep this short.
 
 - **Supabase is the source of truth for off-chain state.** On-chain state is synced via indexer but chain is authoritative for balances/escrow.
 - **`indexer_state` tracks scan position per contract.** Never re-process already-indexed blocks.
+- **When adding a new contract to the indexer, seed its `indexer_state` row with a recent block number.** Never start from block 0 — BSC public RPC rate-limits full-chain log scans.
 - **Duplicate events are handled via unique constraint on `tx_hash`** in `on_chain_events`. Upsert/ignore on conflict.
 
 ## Process Rules
 
 - **Build must pass before committing.** Run `cd app && npm run build`.
-- **Deploy to Railway via push to `main`.** Auto-deploy triggers on push.
+- **Deploy to Railway via push to `main`** (auto-deploy) **or `railway up`** (uploads local files directly). Use `railway up` if git-triggered builds are stale. `railway.json` configures the Docker build.
 - **Contract deployment via Hardhat CLI**, not the web app. `cd contracts && npx hardhat run scripts/deploy.ts --network bscTestnet`.
 - **Database migrations via Supabase CLI or MCP tool.** Not raw SQL in production.
 

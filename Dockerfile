@@ -8,7 +8,9 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-# Cache-bust: force fresh copy of app source
+# WORKAROUND: ARG before COPY invalidates Railway's Docker layer cache for
+# the COPY step. Without this, Railway can serve stale builds missing new files.
+# Remove if Railway fixes their layer cache invalidation for COPY directives.
 ARG CACHEBUST=1
 COPY app/ .
 ENV NEXT_TELEMETRY_DISABLED=1

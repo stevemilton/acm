@@ -51,6 +51,16 @@ async function callEndpoint(
       },
     });
 
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      return {
+        path,
+        ok: false,
+        error: `Non-JSON response (${res.status}): ${text.slice(0, 200)}`,
+      };
+    }
+
     const data = await res.json();
     return { path, ok: res.ok, data };
   } catch (err) {

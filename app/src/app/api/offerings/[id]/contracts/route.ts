@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAddress } from "viem";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(
@@ -22,6 +23,14 @@ export async function POST(
   if (!escrow_address || !share_token_address || !distributor_address) {
     return NextResponse.json(
       { error: "Missing contract addresses" },
+      { status: 400 }
+    );
+  }
+
+  // Validate Ethereum address format
+  if (!isAddress(escrow_address) || !isAddress(share_token_address) || !isAddress(distributor_address)) {
+    return NextResponse.json(
+      { error: "Invalid contract address format" },
       { status: 400 }
     );
   }

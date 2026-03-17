@@ -1,5 +1,16 @@
 # ACM — Changelog
 
+## v0.4.0 — Unblock Factory Deploy + Cron Activation (March 2026)
+
+- Factory operator approval script (`contracts/scripts/approve-operator.ts`) — deployer wallet approved on testnet
+- Cron pipeline activated on Railway: all 3 indexer endpoints verified live (HTTP 200)
+- Railway env vars configured: `INDEXER_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CHAIN_ID`
+- Railway deployment fixed: `railway.json` config, Docker cache-bust workaround
+- Indexer state seeded with recent block numbers (avoids full-chain RPC scan)
+- Review fixes: useEffect for deploy receipt processing, address validation on contracts API, graceful non-JSON error handling in cron, N+1 query elimination in revenue monitor
+- Canonical docs created: PRODUCT_BRIEF, ARCHITECTURE, ROADMAP, RULES, compliance matrix
+- Compliance matrix: 13/18 Complete, 2 Partial, 3 Missing
+
 ## v0.3.0 — Operator Self-Serve + Monitoring (March 2026)
 
 - Operator factory deploy UI: create offering → deploy AgentShare + Escrow + RevenueDistributor from wallet

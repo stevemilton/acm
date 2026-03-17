@@ -9,7 +9,7 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 | # | Requirement | Status | Evidence / Notes |
 |---|-------------|--------|-----------------|
 | C1 | Operator can create an offering via web UI | Complete | `create-offering-form.tsx` → DB insert |
-| C2 | Operator can deploy contracts (AgentShare + Escrow + RevenueDistributor) from web UI | Partial | `deploy-offering.tsx` built. Blocked: operator must be pre-approved on factory via Hardhat. No approval script exists. |
+| C2 | Operator can deploy contracts (AgentShare + Escrow + RevenueDistributor) from web UI | Complete | `deploy-offering.tsx` built. Operator approval script created and run — deployer approved on factory. |
 | C3 | Investor can buy shares (FDUSD approve → escrow deposit → AgentShare tokens) | Complete | `invest-button.tsx`, two-step ERC-20 pattern |
 | C4 | Operator can release escrow when minRaise met | Complete | `escrow-manage.tsx` → `Escrow.release()` |
 | C5 | Operator can trigger refund if offering fails | Complete | `escrow-manage.tsx` → `Escrow.triggerRefund()` |
@@ -25,15 +25,15 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 | I1 | App deployed and accessible | Complete | Railway: `https://perfect-forgiveness-production-fd63.up.railway.app/` |
 | I2 | Smart contracts deployed to BNB testnet | Complete | 5 contracts, addresses in `chain-config.ts` + DB |
 | I3 | Database schema applied | Complete | 4 Supabase migrations |
-| I4 | Indexer runs automatically on schedule | Missing | `/api/cron` endpoint exists. No cron service configured. `INDEXER_SECRET` not set in Railway. |
-| I5 | Revenue monitor captures FDUSD transfers | Partial | `/api/monitor/revenue` built. Never tested with real transfers. |
+| I4 | Indexer runs automatically on schedule | Complete | `/api/cron` endpoint live on Railway. `INDEXER_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CHAIN_ID` set. All 3 sub-endpoints verified healthy (HTTP 200). Needs external cron trigger (every 5 min). |
+| I5 | Revenue monitor captures FDUSD transfers | Partial | `/api/monitor/revenue` deployed and responding (HTTP 200). Not yet tested with real FDUSD transfers. |
 
 ## Smart Contracts
 
 | # | Requirement | Status | Evidence / Notes |
 |---|-------------|--------|-----------------|
 | S1 | Hardhat unit tests for all contracts | Missing | Zero tests written. |
-| S2 | Factory operator approval script | Missing | `setApprovedOperator` exists in contract. No Hardhat script to call it. |
+| S2 | Factory operator approval script | Complete | `contracts/scripts/approve-operator.ts` created and executed. Deployer `0x598B...0260` approved on OfferingFactory. Verified via Hardhat console. |
 | S3 | Smart contract audit | Missing | Pre-mainnet gate. Not started. |
 
 ## Security
@@ -48,5 +48,5 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 
 | # | Requirement | Status | Evidence / Notes |
 |---|-------------|--------|-----------------|
-| D1 | On-chain state syncs to Supabase | Partial | Indexer endpoints built. Never run against live contract events from a fresh deploy. |
+| D1 | On-chain state syncs to Supabase | Complete | Indexer endpoints deployed and verified. `/api/indexer` synced offering state (status, shares_sold) from chain to DB. |
 | D2 | Duplicate event handling | Complete | Unique constraint on `tx_hash` in `on_chain_events`. |

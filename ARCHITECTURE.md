@@ -85,10 +85,14 @@ Smart Contracts (BNB Chain, Solidity 0.8.20)
 3. Factory deploys AgentShare + Escrow + RevenueDistributor
 4. UI parses OfferingCreated event → saves addresses to DB
 
-### Indexer Flow
-1. `/api/cron` called on schedule (GET with auth key)
-2. Runs `/api/indexer` (state sync), `/api/indexer/events` (event processing), `/api/monitor/revenue` (FDUSD transfers)
-3. Updates Supabase with on-chain state
+### Cron / Indexer Pipeline
+1. External cron calls `GET /api/cron?key=<INDEXER_SECRET>` (every 5 min)
+2. Cron orchestrator sequentially calls 3 sub-endpoints via internal POST:
+   - `/api/indexer` — reads escrow status + share balances from chain, syncs to `offerings` table
+   - `/api/indexer/events` — scans contract event logs (Deposited, Released, RevenueReceived), stores in `on_chain_events`, triggers side-effects (upsert shares, update status, insert distributions)
+   - `/api/monitor/revenue` — scans FDUSD Transfer events to agent operator wallets, records in `revenue_events` (excludes escrow-originated transfers)
+3. Each sub-endpoint tracks its scan position in `indexer_state` (per contract address)
+4. Block range capped at 1000 blocks per call to avoid RPC rate limits
 
 ## Data Model Summary
 

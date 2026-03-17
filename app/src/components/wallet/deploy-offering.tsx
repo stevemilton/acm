@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   useAccount,
   useWriteContract,
@@ -92,8 +92,11 @@ export function DeployOffering({
     }
   }
 
-  // Process receipt when it arrives
-  if (receipt && !deployed && !saving) {
+  // Process receipt when it arrives (useEffect prevents double-fire in Strict Mode)
+  const processedRef = useRef(false);
+  useEffect(() => {
+    if (!receipt || deployed || saving || processedRef.current) return;
+    processedRef.current = true;
     setSaving(true);
     setStatus("Transaction confirmed. Saving contract addresses...");
 
@@ -133,12 +136,15 @@ export function DeployOffering({
         .catch((err) => {
           setError(err.message);
           setStatus("");
+          setSaving(false);
+          processedRef.current = false;
         });
     } else {
       setError("Could not find OfferingCreated event in transaction receipt");
       setSaving(false);
+      processedRef.current = false;
     }
-  }
+  }, [receipt, deployed, saving, offeringId]);
 
   if (!isConnected) {
     return (

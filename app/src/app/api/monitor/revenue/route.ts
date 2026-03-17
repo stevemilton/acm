@@ -120,6 +120,16 @@ export async function POST(request: Request) {
     tx_hash: string;
   }> = [];
 
+  // Pre-fetch all escrow addresses to avoid N+1 queries in the loop
+  const { data: allOfferings } = await supabase
+    .from("offerings")
+    .select("escrow_address")
+    .not("escrow_address", "is", null);
+
+  const escrowAddresses = new Set(
+    (allOfferings ?? []).map((o) => (o.escrow_address as string).toLowerCase())
+  );
+
   try {
     const logs = await client.getLogs({
       address: fdusdAddress,
@@ -140,15 +150,8 @@ export async function POST(request: Request) {
       if (amount === BigInt(0)) continue;
       if (from.toLowerCase() === to) continue;
 
-      // Skip known contract addresses (escrow deposits aren't revenue)
-      // We check if the transfer is from an escrow contract
-      const { data: isEscrow } = await supabase
-        .from("offerings")
-        .select("id")
-        .eq("escrow_address", from.toLowerCase())
-        .limit(1);
-
-      if (isEscrow && isEscrow.length > 0) continue;
+      // Skip known escrow contracts (escrow releases aren't revenue)
+      if (escrowAddresses.has(from.toLowerCase())) continue;
 
       for (const agentId of agentIds) {
         const { error: insertError } = await supabase
