@@ -8,6 +8,8 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+# Cache-bust: force fresh copy of app source
+ARG CACHEBUST=1
 COPY app/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
