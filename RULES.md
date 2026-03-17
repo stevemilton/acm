@@ -1,0 +1,38 @@
+# ACM — Rules
+
+Durable rules for AI-assisted development. Keep this short.
+
+## Architecture Rules
+
+- **Client components with wagmi hooks must use `"use client"` + `next/dynamic` with `ssr: false`.** Server Components cannot use wagmi. Create a `client-components.tsx` wrapper per page that needs wallet interaction.
+- **Supabase/viem clients must be created inside handlers, not at module level.** Lazy initialization prevents build-time crashes from missing env vars.
+- **Per-offering contract addresses live in the `offerings` DB table**, not hardcoded. Global addresses (FDUSD, factory) live in `chain-config.ts`.
+- **No BigInt literals (`123n`) in source files.** Use `BigInt(123)`. The TypeScript target doesn't support BigInt literals.
+- **All amounts on-chain use 18 decimals.** Use `parseEther()` / `formatEther()` for conversion. Never pass raw numbers to contract calls.
+
+## Smart Contract Rules
+
+- **Factory pattern is canonical.** Every offering gets its own AgentShare + Escrow + RevenueDistributor deployed by OfferingFactory.
+- **Two-step ERC-20 pattern for all deposits.** Step 1: `token.approve(contract, amount)`. Step 2: `contract.deposit(amount)`. Never send native BNB.
+- **Operators must be approved on the factory** (`setApprovedOperator`) before they can call `createOffering`.
+- **Contract deployer private key stays in `contracts/.env`**, never committed.
+
+## Data Rules
+
+- **Supabase is the source of truth for off-chain state.** On-chain state is synced via indexer but chain is authoritative for balances/escrow.
+- **`indexer_state` tracks scan position per contract.** Never re-process already-indexed blocks.
+- **Duplicate events are handled via unique constraint on `tx_hash`** in `on_chain_events`. Upsert/ignore on conflict.
+
+## Process Rules
+
+- **Build must pass before committing.** Run `cd app && npm run build`.
+- **Deploy to Railway via push to `main`.** Auto-deploy triggers on push.
+- **Contract deployment via Hardhat CLI**, not the web app. `cd contracts && npx hardhat run scripts/deploy.ts --network bscTestnet`.
+- **Database migrations via Supabase CLI or MCP tool.** Not raw SQL in production.
+
+## Product Rules
+
+- **Agent Shares are securities** under Howey Test. All design decisions must account for this.
+- **Revenue share only, never equity.** This is a participation agreement, not ownership transfer.
+- **No speculative features in v1.** No bonding curves, no AMM, no secondary market.
+- **5% platform fee is hardcoded in RevenueDistributor.** Change requires contract redeployment.

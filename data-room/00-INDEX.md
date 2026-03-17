@@ -19,7 +19,7 @@
 - [x] Platform user flows
 - [ ] Product roadmap (detailed)
 - [ ] UI/UX mockups
-- [ ] Demo / prototype link
+- [x] Demo / prototype link (BNB testnet — deployed on Railway)
 
 ### 03 — Market
 - [x] Market opportunity
@@ -40,7 +40,7 @@
 - [x] Data model
 - [ ] Smart contract audit (pending)
 - [ ] Security architecture
-- [ ] Infrastructure / deployment plan
+- [x] Infrastructure / deployment plan (Railway + Supabase + BNB testnet — live)
 
 ### 06 — Legal
 - [x] Regulatory analysis

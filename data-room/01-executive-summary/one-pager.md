@@ -55,10 +55,20 @@ Existing platforms (Virtuals Protocol, ElizaOS) are speculative — bonding curv
 - Binance ecosystem integration (Trust Wallet, Binance Pay)
 - Smart contract audit partner
 
+## Current Status
+
+- ✅ Smart contracts deployed to BNB Chain testnet (OfferingFactory + per-offering AgentShare, Escrow, RevenueDistributor)
+- ✅ Web app live on Railway (Next.js + Supabase + wagmi/viem)
+- ✅ Full invest flow: FDUSD approve → escrow deposit → AgentShare tokens
+- ✅ Operator management: escrow release, revenue distribution
+- ✅ Investor claims: view shares, claim accumulated FDUSD distributions
+- ✅ On-chain event indexing pipeline (chain → Supabase sync)
+- ⏳ Smart contract audit (pre-mainnet requirement)
+
 ## Timeline
 
-- Q2 2026: BNB testnet launch
-- Q3 2026: Mainnet + FDUSD settlement live
+- **Now (March 2026):** BNB testnet live — full raise + distribute cycle functional
+- Q3 2026: Mainnet + real FDUSD settlement live
 - Q4 2026: Agent-to-agent investment goes live
 - 2027: Secondary market, cross-chain, CEX partnerships
 

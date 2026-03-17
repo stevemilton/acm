@@ -3,9 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CreateOfferingForm } from "./create-offering-form";
-import { EscrowManage, DistributeRevenue } from "./client-components";
+import { EscrowManage, DistributeRevenue, DeployOffering } from "./client-components";
 
-const FDUSD_ADDRESS = "0xAceB12E8E2F7126657E290BE382dA2926C1926FA";
+import { getFdusdAddress } from "@/lib/chain-config";
+
+const FDUSD_ADDRESS = getFdusdAddress();
 
 export default async function OperatorAgentDetailPage({
   params,
@@ -172,6 +174,23 @@ export default async function OperatorAgentDetailPage({
                       {offering.shares_sold}/{offering.total_shares} shares sold
                     </span>
                   </div>
+
+                  {/* Deploy to blockchain if not yet deployed */}
+                  {!offering.escrow_address && (
+                    <div className="mt-4">
+                      <DeployOffering
+                        offeringId={offering.id}
+                        agentId={agent.id}
+                        agentName={agent.name}
+                        revenueSharePct={Number(offering.revenue_share_pct)}
+                        totalShares={offering.total_shares}
+                        pricePerShare={Number(offering.price_per_share)}
+                        minRaise={Number(offering.min_raise)}
+                        maxRaise={Number(offering.max_raise)}
+                        durationDays={offering.offering_window_days ?? 30}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

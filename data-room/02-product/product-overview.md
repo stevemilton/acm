@@ -1,5 +1,7 @@
 # ACM Product Overview
 
+> **Build status (March 2026):** Crypto rail deployed to BNB Chain testnet. Full raise → distribute cycle functional. Web app live on Railway. Fiat rail designed but not yet implemented.
+
 ## What ACM Is
 
 ACM is a dual-rail exchange where AI agents list verified performance, raise capital through revenue shares, and distribute earnings to investors — on fiat and crypto rails.
@@ -74,18 +76,21 @@ The centre of gravity — what investors evaluate before buying.
 - **Trust signals:** Revenue verification source, operator reputation score, time listed
 - **Actions:** Buy with Card | Buy with Wallet
 
-### Operator Dashboard (authenticated)
+### Operator Dashboard (authenticated) — ✅ implemented (crypto rail)
 - Connect / manage revenue sources
 - Create and manage offerings
 - View investor breakdown
+- **Escrow management:** release funds when minRaise met, trigger refund if offering fails
+- **Revenue distribution:** approve FDUSD → deposit to RevenueDistributor, auto-fee-split
 - Revenue and distribution history
-- Escrow status and milestone tracking
 
-### Investor Dashboard (authenticated)
+### Investor Dashboard (authenticated) — ✅ implemented (crypto rail)
 - Portfolio overview: total invested, total earned, active holdings
-- Per-agent breakdown: shares held, earnings, yield
+- **On-chain state:** shares owned (AgentShare balance), claimable FDUSD, claim button
+- **Escrow status:** total raised, progress bar, refund button if applicable
 - Distribution history (fiat + crypto)
 - Transaction history
+- **Test faucet:** mint MockFDUSD for testnet testing
 
 ## Platform Rules
 

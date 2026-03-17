@@ -21,56 +21,65 @@ The Agent Share Token is a BEP-20 token on BNB Chain that represents a pro-rata 
 
 ## Smart Contract Architecture
 
-### AgentShareFactory
-Deploys new AgentShare token contracts for each agent listing.
+> **Status:** Deployed to BNB Chain testnet (Chain ID 97). All contracts verified and functional.
 
-- `createAgentShare(agentId, name, symbol, totalSupply, revenueSharePct, pricePerShare, minRaise, operator)` → deploys new token contract
-- Maintains registry of all deployed agent share contracts
-- Only callable by ACM platform (access controlled)
+### OfferingFactory (1 instance — deploys all per-offering contracts)
+Creates a full contract set (AgentShare + Escrow + RevenueDistributor) for each agent listing in a single transaction.
 
-### AgentShare (per-agent token contract)
-Each agent gets its own BEP-20 token contract.
+- `createOffering(OfferingParams)` → deploys AgentShare, Escrow, and RevenueDistributor contracts
+- `OfferingParams` struct: `agentId, name, symbol, revenueShareBps, totalSupply, minRaise, maxRaise, pricePerShare, deadline, operator`
+- `getOffering(uint256 id)` → returns all deployed addresses + metadata
+- `totalOfferings()` → number of offerings created
+- Access controlled: `approvedOperators` mapping + contract owner
 
-**State:**
-- `operator` — operator wallet address
-- `revenueSharePct` — percentage of revenue distributed to holders (immutable after deploy)
-- `totalSupply` — fixed at creation
-- `pricePerShare` — in FDUSD
-- `minRaise` — minimum FDUSD to raise before escrow releases
-- `raised` — total FDUSD raised so far
-- `status` — OPEN | FUNDED | CLOSED | REFUNDING
-- `transferable` — boolean (false in v1)
+**Deployed (testnet):** `0xe6C3AA4130c4Bf68dACEEE6F1cb8467dF2E262DA`
 
-**Purchase flow:**
-- `buyShares(quantity)` — transfers FDUSD from buyer to escrow, mints tokens to buyer
-- Reverts if offering is not OPEN or insufficient shares remaining
-- When `raised >= minRaise`, status transitions to FUNDED
+### AgentShare (1 per offering — BEP-20 token)
+Each offering gets its own BEP-20 token contract with fixed supply, minted entirely to the linked Escrow contract at creation.
 
-**Refund flow:**
-- If offering expires without meeting `minRaise`, status → REFUNDING
-- `claimRefund()` — burns tokens, returns FDUSD to holder
-- Also triggered by revenue cliff protection (>50% drop within 90 days)
+- `name`, `symbol` — set at deploy (e.g., "RevenueBot Shares" / "RBS")
+- `totalSupply` — fixed at creation, 18 decimals
+- `revenueShareBps` — basis points (e.g., 1500 = 15%), immutable
+- Non-transferable in v1
 
-### RevenueDistributor
-Handles incoming revenue and distributes to token holders.
+**Deployed (demo offering):** `0xa8b47e1f450a484c3D40622fB23C1e825A7A25F9`
+
+### Escrow (1 per offering)
+Holds FDUSD from investor deposits until minimum raise is met. Distributes AgentShare tokens to depositors.
+
+**Purchase flow (two-step ERC-20 pattern):**
+1. Investor calls `FDUSD.approve(escrowAddress, amount)`
+2. Investor calls `Escrow.deposit(amount)` — escrow pulls FDUSD via `transferFrom`, sends AgentShare tokens pro-rata
+
+**Escrow management:**
+- `release()` — operator calls after `minRaise` met. Transfers all FDUSD to operator. One-time.
+- `triggerRefund()` — enables refund mode (offering expired or cliff protection triggered)
+- `claimRefund()` — investors burn AgentShare tokens, reclaim deposited FDUSD
+
+**View functions:** `totalRaised()`, `minRaise()`, `maxRaise()`, `deadline()`, `released()`, `refunding()`
+
+**Deployed (demo offering):** `0x0c50cc920489B3FE39670708071c4eC959BA867F`
+
+### RevenueDistributor (1 per offering)
+Handles incoming revenue and distributes to AgentShare holders using cumulative dividend pattern.
 
 **Revenue deposit:**
-- `depositRevenue(agentId, amount)` — called by ACM platform when verified revenue arrives
-- Deducts 5% platform fee → sends to ACM treasury
-- Remaining amount allocated pro-rata to all token holders
-- Uses a dividend-tracking pattern (cumulative revenue per token) for gas-efficient distribution
+- `depositRevenue(uint256 amount)` — operator deposits FDUSD revenue
+- Deducts platform fee (5%) → sends to ACM treasury
+- Splits remainder: operator share + investor share (based on `revenueShareBps`)
+- Updates `cumulativeRevenuePerToken` — O(1) gas regardless of holder count
 
 **Claim flow:**
-- `claimDistribution(agentId)` — holder claims their accumulated distributions in FDUSD
-- Alternatively: auto-push distributions (higher gas, better UX) — configurable per agent
+- `claim()` — holder claims accumulated distributions in FDUSD
+- `claimable(address)` — view pending distribution amount
 
-### EscrowManager
-Manages capital raised during offerings.
+**Deployed (demo offering):** `0x3217ED63cB3ee9758c7b0D1047B73F83b9585fAF`
 
-- Holds FDUSD from share purchases until minimum raise is met
-- Releases funds to operator on milestone schedule (not all at once)
-- Default milestones: 33% at funding, 33% at 30 days (if revenue maintained), 34% at 90 days
-- Triggers auto-refund if revenue cliff protection activates
+### MockFDUSD (testnet only)
+- ERC-20 test token ("ACM Mock FDUSD" / "mFDUSD"), public `mint()`, 18 decimals
+- Production will use real FDUSD: `0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409`
+
+**Deployed (testnet):** `0xAceB12E8E2F7126657E290BE382dA2926C1926FA`
 
 ## Lock-up Enforcement
 

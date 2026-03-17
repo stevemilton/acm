@@ -69,19 +69,22 @@ Buy shares
     │   ├─ Funds held in Stripe escrow
     │   └─ Share recorded in database (legal agreement)
     │
-    └─ Crypto rail:
-        ├─ Approve FDUSD spend → call buyShares(qty) on smart contract
-        ├─ FDUSD transferred to escrow contract
-        └─ BEP-20 Agent Share tokens minted to wallet
+    └─ Crypto rail (implemented — two-step ERC-20 pattern):
+        ├─ Step 1: FDUSD.approve(escrowAddress, amount) — authorize escrow to pull FDUSD
+        ├─ Step 2: Escrow.deposit(amount) — escrow calls transferFrom to pull FDUSD
+        ├─ Escrow transfers AgentShare tokens to investor pro-rata
+        └─ UI shows FDUSD balance, allowance, and step progress
     │
     ▼
 Escrow logic
     │
-    ├─ If raised >= minRaise → status: FUNDED
-    │   └─ First escrow tranche released to operator (33%)
+    ├─ If raised >= minRaise:
+    │   ├─ Operator calls Escrow.release()
+    │   └─ All FDUSD transferred to operator wallet
     │
-    └─ If offering window expires and raised < minRaise → status: REFUNDING
-        └─ Investors claim refund (FDUSD returned, tokens burned)
+    └─ If offering window expires and raised < minRaise:
+        ├─ Operator or platform calls Escrow.triggerRefund()
+        └─ Investors call Escrow.claimRefund() — FDUSD returned, AgentShare tokens burned
 ```
 
 ## Flow 3: Revenue Distribution
@@ -117,11 +120,48 @@ Distribution execution
     │   ├─ Stripe Connect payout to each investor
     │   └─ Distribution recorded in database
     │
-    └─ Crypto rail (real-time):
-        ├─ depositRevenue() called on RevenueDistributor contract
-        ├─ Platform fee sent to ACM treasury wallet
-        ├─ Cumulative dividend per token updated
-        └─ Investors claim via claimDistribution() or auto-push
+    └─ Crypto rail (implemented — real-time):
+        ├─ Operator approves FDUSD spend to RevenueDistributor
+        ├─ Operator calls depositRevenue(amount)
+        ├─ Contract auto-splits: 5% platform fee → treasury
+        ├─ Remainder split: operator share + investor share (based on revenueShareBps)
+        ├─ Investor portion updates cumulativeRevenuePerToken (O(1) gas)
+        └─ Investors call claim() to withdraw accumulated FDUSD
+```
+
+## Flow 3b: Operator On-Chain Management (implemented)
+
+```
+Operator dashboard (/operator/agents/[id])
+    │
+    ▼
+Escrow Management
+    │
+    ├─ View: total raised, min/max raise, deadline, current status
+    ├─ Release funds: calls Escrow.release() when minRaise met
+    │   └─ All FDUSD transferred from escrow to operator wallet
+    └─ Trigger refund: calls Escrow.triggerRefund() if offering fails
+        └─ Enables investors to call claimRefund()
+    │
+    ▼
+Revenue Distribution
+    │
+    ├─ View: fee breakdown (5% platform, operator share, investor share)
+    ├─ Enter FDUSD amount to distribute
+    ├─ Step 1: FDUSD.approve(distributorAddress, amount)
+    ├─ Step 2: RevenueDistributor.depositRevenue(amount)
+    └─ Contract auto-splits and updates cumulative dividends
+```
+
+## Flow 3c: Investor Claims Revenue (implemented)
+
+```
+Investor dashboard (/agents/[id])
+    │
+    ├─ View: shares owned (from AgentShare.balanceOf)
+    ├─ View: claimable FDUSD (from RevenueDistributor.claimable)
+    └─ Claim: calls RevenueDistributor.claim()
+        └─ FDUSD transferred to investor wallet
 ```
 
 ## Flow 4: Revenue Cliff Protection

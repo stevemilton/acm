@@ -18,6 +18,14 @@ const DistributeRevenueInner = dynamic(
   { ssr: false }
 );
 
+const DeployOfferingInner = dynamic(
+  () =>
+    import("@/components/wallet/deploy-offering").then(
+      (mod) => mod.DeployOffering
+    ),
+  { ssr: false }
+);
+
 export function EscrowManage({
   escrowAddress,
 }: {
@@ -39,4 +47,18 @@ export function DistributeRevenue({
       fdusdAddress={fdusdAddress}
     />
   );
+}
+
+export function DeployOffering(props: {
+  offeringId: string;
+  agentId: string;
+  agentName: string;
+  revenueSharePct: number;
+  totalShares: number;
+  pricePerShare: number;
+  minRaise: number;
+  maxRaise: number;
+  durationDays: number;
+}) {
+  return <DeployOfferingInner {...props} />;
 }

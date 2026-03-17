@@ -288,6 +288,22 @@ export const ERC20_ABI = [
   },
 ] as const;
 
+// Factory events
+export const OFFERING_FACTORY_EVENTS_ABI = [
+  {
+    type: "event",
+    name: "OfferingCreated",
+    inputs: [
+      { indexed: true, name: "offeringId", type: "uint256" },
+      { indexed: false, name: "agentId", type: "string" },
+      { indexed: false, name: "agentShare", type: "address" },
+      { indexed: false, name: "escrow", type: "address" },
+      { indexed: false, name: "revenueDistributor", type: "address" },
+      { indexed: false, name: "operator", type: "address" },
+    ],
+  },
+] as const;
+
 // Event ABIs for indexing
 
 export const ESCROW_EVENTS_ABI = [
