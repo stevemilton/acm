@@ -72,7 +72,7 @@
 - `DEPLOYER_PRIVATE_KEY` (in contracts/.env, gitignored)
 
 ## Last Completed Sprint (2026-03-17)
-**Sprint 005: Smart Contract Audit Prep** — IN PROGRESS
+**Sprint 005: Smart Contract Audit Prep** — COMPLETE
 - Branch: `sprint-005-audit-prep`
 - SafeERC20 added to Escrow + RevenueDistributor (7 High Slither findings fixed)
 - 13 state variables marked `immutable` (13 Optimization findings fixed)

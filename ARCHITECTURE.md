@@ -153,7 +153,7 @@ Three `SECURITY DEFINER` functions bypass RLS for atomic counter updates:
 | Layer | Environment | Status |
 |-------|------------|--------|
 | Frontend + API | Railway (Docker) | Live |
-| Database | Supabase (managed Postgres) | Live (5 migrations) |
+| Database | Supabase (managed Postgres) | Live (6 migrations) |
 | Smart contracts | BNB Chain testnet (97) | Deployed |
 | Indexer cron | External cron → `/api/cron` | Ready (needs cron service) |
 
