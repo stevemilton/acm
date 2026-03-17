@@ -17,6 +17,10 @@ Durable rules for AI-assisted development. Keep this short.
 - **Operators must be approved on the factory** (`setApprovedOperator`) before they can call `createOffering`.
 - **Contract deployer private key stays in `contracts/.env`**, never committed.
 
+## Security Rules
+
+- **Use `SECURITY DEFINER` RPC functions for cross-role writes.** When an API route acts on behalf of one role (e.g., investor) but needs to update a table owned by another role (e.g., operator's offerings), use an existing `security definer` function (e.g., `increment_shares_sold`) instead of a direct `.update()`. Direct writes will be blocked by RLS scoping.
+
 ## Data Rules
 
 - **Supabase is the source of truth for off-chain state.** On-chain state is synced via indexer but chain is authoritative for balances/escrow.

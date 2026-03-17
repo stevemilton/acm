@@ -104,20 +104,56 @@ Smart Contracts (BNB Chain, Solidity 0.8.20)
 
 Key relationship: `offerings` table bridges off-chain and on-chain via `escrow_address`, `share_token_address`, `distributor_address`, `factory_offering_id`.
 
-## Auth / Security Boundaries
+## Security Model
 
-- Supabase RLS on all tables
-- Operator ownership verified via user → operator → agent → offering chain
-- Indexer endpoints protected by `INDEXER_SECRET` header/query param
-- Smart contracts: `onlyOwnerOrApproved` on factory, `onlyOperator` on escrow/distributor
+### Supabase RLS Policy Summary
+
+All 6 user-facing tables have Row Level Security (RLS) enabled with explicit policies:
+
+| Table | SELECT | INSERT | UPDATE | DELETE |
+|-------|--------|--------|--------|--------|
+| **operators** | Public read | Own `user_id` only | Own `user_id` only | Blocked |
+| **investors** | Public read | Own `user_id` only | Own `user_id` only | Blocked |
+| **agents** | Public read | Owning operator only | Owning operator only | Blocked |
+| **offerings** | Public read | Owning operator only | Owning operator only | Blocked |
+| **shares** | Own investor only | Own `investor_id` only | None (immutable) | Blocked |
+| **distributions** | Public read | Owning operator only | None (immutable) | Blocked |
+
+Ownership chain: `auth.uid()` → `operators.user_id` → `agents.operator_id` → `offerings.agent_id` / `distributions.agent_id`.
+
+**System tables** (`indexer_state`, `on_chain_events`) have RLS disabled — they are only accessed by service-role routes and contain non-sensitive public blockchain data.
+
+### Service-Role Usage
+
+Three routes bypass RLS using `SUPABASE_SERVICE_ROLE_KEY`:
+- `POST /api/indexer` — syncs on-chain state to `offerings` table
+- `POST /api/indexer/events` — processes blockchain events, writes to `on_chain_events`, `shares`, `offerings`, `distributions`
+- `POST /api/monitor/revenue` — watches FDUSD transfers, writes to `revenue_events`
+
+All three are protected by `INDEXER_SECRET` header check (`x-indexer-key`). The cron orchestrator (`/api/cron`) also requires the secret (via header or `?key=` query param).
+
+Dev-mode bypass: if `INDEXER_SECRET` env var is unset, auth check is skipped. In production, the secret is always set.
+
+### Database Functions
+
+Three `SECURITY DEFINER` functions bypass RLS for atomic counter updates:
+- `increment_investor_invested(investor_id, amount)` — updates `investors.total_invested`
+- `increment_investor_earned(investor_id, amount)` — updates `investors.total_earned`
+- `increment_shares_sold(offering_id, quantity)` — updates `offerings.shares_sold`
+
+### Other Security Boundaries
+
+- Operator ownership verified via user → operator → agent → offering chain in API routes
+- Smart contracts: `onlyOwnerOrApproved` on factory, `onlyOwner` on escrow/distributor
 - Non-transferable shares in v1 (no secondary market attack surface)
+- Contract deployer private key in `contracts/.env` (gitignored)
 
 ## Deployment
 
 | Layer | Environment | Status |
 |-------|------------|--------|
 | Frontend + API | Railway (Docker) | Live |
-| Database | Supabase (managed Postgres) | Live (4 migrations) |
+| Database | Supabase (managed Postgres) | Live (5 migrations) |
 | Smart contracts | BNB Chain testnet (97) | Deployed |
 | Indexer cron | External cron → `/api/cron` | Ready (needs cron service) |
 
@@ -138,4 +174,4 @@ Set `NEXT_PUBLIC_CHAIN_ID=56` for mainnet, `97` for testnet. All addresses, RPCs
 3. **Indexer reliability** — Depends on external cron. No retry/dead-letter queue.
 4. **BSC testnet RPC** — Indexer uses publicnode.com RPC (Binance seed node rate-limits getLogs). No fallback.
 5. **Revenue verification** — On-chain monitor is passive (watches transfers). No fraud detection beyond escrow-source filtering.
-6. **Supabase RLS** — Policies exist but need audit for completeness.
+6. **Supabase RLS** — Audited in sprint 004. All user-facing tables have complete policies. See Security Model section above.

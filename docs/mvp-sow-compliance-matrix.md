@@ -40,7 +40,7 @@ Status key: **Complete** | **Partial** | **Missing** | **N/A**
 
 | # | Requirement | Status | Evidence / Notes |
 |---|-------------|--------|-----------------|
-| X1 | Supabase RLS policies audited | Missing | Policies exist but never reviewed for correctness. |
+| X1 | Supabase RLS policies audited | Complete | Full audit in sprint 004. Migration `00005_rls_audit.sql` adds missing INSERT/UPDATE policies on `offerings`, `shares`, `distributions`. Explicit DELETE deny on all 6 tables. RLS test script at `supabase/tests/rls_audit.sql` covers cross-user isolation, cross-operator write blocking, anon rejection, and service-role bypass. System tables (`indexer_state`, `on_chain_events`) intentionally exempt — documented. |
 | X2 | Indexer/cron endpoints auth-gated | Complete | `INDEXER_SECRET` header check in all indexer routes. |
 | X3 | No secrets in committed code | Complete | `contracts/.env` gitignored, deployer key safe. |
 

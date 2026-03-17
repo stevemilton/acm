@@ -1,5 +1,21 @@
 # ACM — Changelog
 
+## v0.7.0 — Supabase RLS Audit (March 2026)
+
+- Full RLS audit of all 8 database tables
+- Added missing INSERT policy on `offerings` (scoped to owning operator)
+- Added missing UPDATE policy on `offerings` (scoped to owning operator)
+- Added missing INSERT policy on `shares` (scoped to authenticated investor's own record)
+- Added missing INSERT policy on `distributions` (scoped to owning operator)
+- Added explicit DELETE deny policies on all 6 user-facing tables
+- Documented intentional RLS exclusion for `indexer_state` and `on_chain_events`
+- Verified all 4 service-role routes require `INDEXER_SECRET` auth
+- RLS test script: 9 test groups covering cross-user read isolation, cross-operator write blocking, authorized writes, anon rejection, delete blocking, and service-role bypass
+- New migration: `supabase/migrations/00005_rls_audit.sql`
+- ARCHITECTURE.md: Added comprehensive "Security Model" section
+- **Critical finding fixed:** `offerings`, `shares`, and `distributions` had RLS enabled but no write policies — all API writes through the anon-key client were silently blocked
+- Compliance matrix: X1 → Complete (17/18 Complete, 1 Missing: S3 audit)
+
 ## v0.6.0 — Solidity Unit Tests (March 2026)
 
 - Comprehensive Hardhat unit tests for all 5 Solidity contracts (83 tests, 0 failures)

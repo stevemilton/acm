@@ -114,11 +114,12 @@ export async function POST(
     );
   }
 
-  // Update shares_sold on offering
-  await supabase
-    .from("offerings")
-    .update({ shares_sold: offering.shares_sold + quantity })
-    .eq("id", offeringId);
+  // Update shares_sold on offering (uses security definer to bypass RLS —
+  // the authenticated user is the investor, not the operator who owns the offering)
+  await supabase.rpc("increment_shares_sold", {
+    offering_id: offeringId,
+    quantity,
+  });
 
   // Update investor total_invested
   const investedAmount = quantity * Number(offering.price_per_share);

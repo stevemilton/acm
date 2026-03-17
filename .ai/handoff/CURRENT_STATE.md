@@ -53,15 +53,16 @@
 - Agent-to-agent investment
 
 ### Compliance Matrix Score
-**16/18 Complete | 0 Partial | 2 Missing**
-- Missing: S3 (audit), X1 (RLS audit)
+**17/18 Complete | 0 Partial | 1 Missing**
+- Missing: S3 (smart contract audit — requires external vendor)
 - Note: UI E2E walkthrough remains unverified — E2E cycle was executed via Hardhat script, not browser UI
 
-### Database Schema (4 migrations)
-1. `00001_initial_schema.sql` — Core tables
-2. `00002_functions.sql` — DB functions
+### Database Schema (5 migrations)
+1. `00001_initial_schema.sql` — Core tables + initial RLS policies
+2. `00002_functions.sql` — DB functions (security definer)
 3. `00003_offering_contracts.sql` — Contract address columns on offerings
-4. `00004_indexer.sql` — indexer_state + on_chain_events
+4. `00004_indexer.sql` — indexer_state + on_chain_events (no RLS — system tables)
+5. `00005_rls_audit.sql` — Missing write policies + explicit delete deny on all tables
 
 ### Key Environment Variables (Railway)
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
@@ -70,25 +71,24 @@
 - `DEPLOYER_PRIVATE_KEY` (in contracts/.env, gitignored)
 
 ## Last Completed Sprint (2026-03-17)
-**Sprint 003: Solidity Unit Tests** — IN PROGRESS
-- Branch: `sprint-003-solidity-tests`
-- 83 Hardhat unit tests for all 5 contracts, 0 failures
-- Bug fix: `Escrow.claimRefund()` now returns AgentShare tokens via `returnShares()`
-- New `AgentShare.returnShares()` onlyOwner function added
-- S1 compliance item → Complete (16/18)
+**Sprint 004: Supabase RLS Audit** — MERGE_APPROVED
+- Archive: `.ai/archive/sprint-004-rls-audit/`
+- Migration `00005_rls_audit.sql`: added missing write policies on offerings, shares, distributions
+- Explicit DELETE deny on all 6 user-facing tables
+- Invest route fix: replaced direct `offerings.update()` with `increment_shares_sold` RPC (security definer)
+- X1 compliance item → Complete (17/18)
+
+**Sprint 003: Solidity Unit Tests** — MERGED
+- Archive: `.ai/archive/sprint-003-solidity-tests/`
 
 **Sprint 002: E2E Testnet Cycle** — MERGED
 - Archive: `.ai/archive/sprint-002-e2e-testnet/`
-- E2E script: `contracts/scripts/e2e-cycle.ts`
-- All 7 lifecycle steps passed with on-chain tx evidence
-- 4 events indexed live: Deposited, Released, RevenueReceived, InvestorClaimed
-- 3 bugs fixed: Escrow share transfer, indexer block range cap + retry-on-failure, RPC endpoint switch
-- Factory redeployed (v2): `0x2f3E26b798B4D7906577F52a65BaA991Ea99C67A`
 
 ## Known Tech Debt
-- ~~Escrow.claimRefund() does not return AgentShare tokens to contract~~ — fixed in sprint 003, `returnShares()` added to AgentShare
 - UI E2E walkthrough never performed (E2E was via Hardhat script — contract paths verified, UI paths not)
 - Old demo offering (c0000000) in DB references deprecated v1 factory contracts
+- Share magnitude mismatch: Escrow produces raw integer shares, RevenueDistributor tests use 18-decimal shares (math works at both scales but integration test would be valuable)
+- `revenue_events` table referenced in code but not in migrations 00001–00005 — may need schema audit
 
 ## Safest Next Step
-Sprint 003 is complete. The two remaining compliance gaps are S3 (smart contract audit) and X1 (Supabase RLS audit). X1 is the most actionable — it requires no external vendor and can be done in a single sprint. S3 requires an external auditor and should be scheduled after X1. Alternatively, address the share magnitude mismatch (Escrow produces raw integer shares, RevenueDistributor tests use 18-decimal shares) with an integration test sprint.
+17/18 compliance complete. The only remaining gap is S3 (smart contract audit), which requires an external auditor. The next internally-actionable sprint would be **audit prep**: flatten contracts, run Slither static analysis, fix any findings, prepare audit scope document. Alternatively, tackle UI E2E walkthrough or the `revenue_events` table schema gap.
