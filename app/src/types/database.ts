@@ -10,6 +10,7 @@ export type AgentStatus = "pending" | "verified" | "listed" | "suspended";
 export type EscrowStatus = "pending" | "funded" | "released" | "refunded";
 export type Rail = "fiat" | "crypto";
 export type KycStatus = "none" | "pending" | "verified" | "rejected";
+export type RevenueTier = "pre_revenue" | "early_revenue" | "verified";
 export type PaymentStatus =
   | "pending"
   | "tokenized"
@@ -35,6 +36,10 @@ export interface Database {
           revenue_verified_at: string | null;
           verification_days: number;
           status: AgentStatus;
+          revenue_tier: RevenueTier;
+          demo_url: string | null;
+          active_users: number;
+          pitch: string;
           metadata: Json;
           created_at: string;
           updated_at: string;
@@ -50,6 +55,10 @@ export interface Database {
           revenue_verified_at?: string | null;
           verification_days?: number;
           status?: AgentStatus;
+          revenue_tier?: RevenueTier;
+          demo_url?: string | null;
+          active_users?: number;
+          pitch?: string;
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
@@ -65,6 +74,10 @@ export interface Database {
           revenue_verified_at?: string | null;
           verification_days?: number;
           status?: AgentStatus;
+          revenue_tier?: RevenueTier;
+          demo_url?: string | null;
+          active_users?: number;
+          pitch?: string;
           metadata?: Json;
           created_at?: string;
           updated_at?: string;
@@ -319,6 +332,7 @@ export interface Database {
       rail: Rail;
       kyc_status: KycStatus;
       payment_status: PaymentStatus;
+      revenue_tier: RevenueTier;
     };
   };
 }

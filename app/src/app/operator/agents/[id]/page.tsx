@@ -3,11 +3,21 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CreateOfferingForm } from "./create-offering-form";
-import { EscrowManage, DistributeRevenue, DeployOffering } from "./client-components";
 
-import { getFdusdAddress } from "@/lib/chain-config";
-
-const FDUSD_ADDRESS = getFdusdAddress();
+const TIER_BADGES: Record<string, { label: string; className: string }> = {
+  pre_revenue: {
+    label: "Pre-Revenue",
+    className: "bg-purple-500/10 text-purple-400",
+  },
+  early_revenue: {
+    label: "Early Revenue",
+    className: "bg-yellow-500/10 text-yellow-500",
+  },
+  verified: {
+    label: "Verified",
+    className: "bg-accent/10 text-accent",
+  },
+};
 
 export default async function OperatorAgentDetailPage({
   params,
@@ -27,9 +37,13 @@ export default async function OperatorAgentDetailPage({
 
   if (!agent) notFound();
 
+  const tier = agent.revenue_tier ?? "pre_revenue";
+  const tierBadge = TIER_BADGES[tier] ?? TIER_BADGES.pre_revenue;
+  const isPreRevenue = tier === "pre_revenue";
+
   const { data: offerings } = await supabase
     .from("offerings")
-    .select("*, escrow_address, share_token_address, distributor_address")
+    .select("*")
     .eq("agent_id", agent.id)
     .order("created_at", { ascending: false });
 
@@ -40,6 +54,7 @@ export default async function OperatorAgentDetailPage({
     .order("period_end", { ascending: false })
     .limit(10);
 
+  // All tiers can create offerings once listed
   const canCreateOffering =
     agent.status === "verified" || agent.status === "listed";
 
@@ -58,61 +73,73 @@ export default async function OperatorAgentDetailPage({
           <p className="text-muted mt-1">{agent.category}</p>
         </div>
         <span
-          className={`text-xs font-medium px-3 py-1.5 rounded-full ${
-            agent.status === "listed"
-              ? "bg-blue-500/10 text-blue-500"
-              : agent.status === "verified"
-                ? "bg-accent/10 text-accent"
-                : "bg-yellow-500/10 text-yellow-500"
-          }`}
+          className={`text-xs font-medium px-3 py-1.5 rounded-full ${tierBadge.className}`}
         >
-          {agent.status}
+          {tierBadge.label}
         </span>
       </div>
 
-      {/* Revenue verification status */}
+      {/* Metrics */}
       <div className="grid sm:grid-cols-3 gap-6 mb-8">
-        <div className="p-6 rounded-xl border border-card-border bg-card">
-          <p className="text-muted text-sm">Monthly Revenue</p>
-          <p className="text-2xl font-bold mt-1">
-            ${Number(agent.monthly_revenue).toLocaleString()}
-          </p>
-        </div>
-        <div className="p-6 rounded-xl border border-card-border bg-card">
-          <p className="text-muted text-sm">Verification Days</p>
-          <p className="text-2xl font-bold mt-1">{agent.verification_days}</p>
-          {agent.verification_days < 30 && (
-            <p className="text-yellow-500 text-xs mt-1">
-              {30 - agent.verification_days} more days needed
-            </p>
-          )}
-        </div>
-        <div className="p-6 rounded-xl border border-card-border bg-card">
-          <p className="text-muted text-sm">Revenue Source</p>
-          <p className="text-lg font-semibold mt-1 capitalize">
-            {agent.revenue_source}
-          </p>
-        </div>
+        {isPreRevenue ? (
+          <>
+            <div className="p-6 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-sm">Active Users</p>
+              <p className="text-2xl font-bold mt-1">
+                {(agent.active_users ?? 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-6 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-sm">Stage</p>
+              <p className="text-2xl font-bold mt-1">Pre-Revenue</p>
+            </div>
+            <div className="p-6 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-sm">Status</p>
+              <p className="text-lg font-semibold mt-1 capitalize">
+                {agent.status}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="p-6 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-sm">Monthly Revenue</p>
+              <p className="text-2xl font-bold mt-1">
+                ${Number(agent.monthly_revenue).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-6 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-sm">Verification Days</p>
+              <p className="text-2xl font-bold mt-1">
+                {agent.verification_days}
+              </p>
+              {agent.verification_days < 30 && (
+                <p className="text-yellow-500 text-xs mt-1">
+                  {30 - agent.verification_days} more days needed
+                </p>
+              )}
+            </div>
+            <div className="p-6 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-sm">Revenue Source</p>
+              <p className="text-lg font-semibold mt-1 capitalize">
+                {agent.revenue_source}
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Revenue verification prompt */}
+      {/* Pending status prompt */}
       {agent.status === "pending" && (
         <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-6 mb-8">
           <h3 className="font-semibold text-yellow-500 mb-2">
-            Revenue Verification Required
+            Listing Under Review
           </h3>
-          <p className="text-sm text-muted mb-4">
-            Connect your revenue source to begin the 30-day verification period.
-            Once verified, you can create an offering.
+          <p className="text-sm text-muted">
+            {isPreRevenue
+              ? "Your agent listing is pending review. Once approved, you can create an offering and start raising capital."
+              : "Connect your revenue source to begin verification. Once verified, you can create an offering."}
           </p>
-          {agent.revenue_source === "stripe" && (
-            <Link
-              href={`/api/stripe/connect?agent_id=${agent.id}`}
-              className="inline-flex px-4 py-2 rounded-lg bg-accent text-background font-medium text-sm hover:bg-accent-hover transition-colors"
-            >
-              Connect Stripe
-            </Link>
-          )}
         </div>
       )}
 
@@ -174,23 +201,6 @@ export default async function OperatorAgentDetailPage({
                       {offering.shares_sold}/{offering.total_shares} shares sold
                     </span>
                   </div>
-
-                  {/* Deploy to blockchain if not yet deployed */}
-                  {!offering.escrow_address && (
-                    <div className="mt-4">
-                      <DeployOffering
-                        offeringId={offering.id}
-                        agentId={agent.id}
-                        agentName={agent.name}
-                        revenueSharePct={Number(offering.revenue_share_pct)}
-                        totalShares={offering.total_shares}
-                        pricePerShare={Number(offering.price_per_share)}
-                        minRaise={Number(offering.min_raise)}
-                        maxRaise={Number(offering.max_raise)}
-                        durationDays={offering.offering_window_days ?? 30}
-                      />
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -205,7 +215,8 @@ export default async function OperatorAgentDetailPage({
         ) : (
           <div className="rounded-xl border border-card-border bg-card p-8 text-center">
             <p className="text-muted text-sm">
-              Complete revenue verification to create an offering
+              Your listing needs to be approved before you can create an
+              offering
             </p>
           </div>
         )}
@@ -213,23 +224,6 @@ export default async function OperatorAgentDetailPage({
 
       {/* Create offering form */}
       {canCreateOffering && <CreateOfferingForm agentId={agent.id} />}
-
-      {/* Escrow Management */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">Escrow Management</h2>
-        <EscrowManage
-          escrowAddress={offerings?.[0]?.escrow_address ?? undefined}
-        />
-      </div>
-
-      {/* Revenue Distribution */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">Revenue Distribution</h2>
-        <DistributeRevenue
-          distributorAddress={offerings?.[0]?.distributor_address ?? undefined}
-          fdusdAddress={FDUSD_ADDRESS}
-        />
-      </div>
 
       {/* Distributions history */}
       <div className="mt-8">

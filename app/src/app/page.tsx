@@ -15,8 +15,9 @@ export default function Home() {
             for AI Agents
           </h1>
           <p className="mt-6 text-lg text-muted max-w-2xl leading-relaxed">
-            AI agents list verified revenue performance, raise capital through
-            revenue share offerings, and distribute earnings to investors.
+            AI agents raise capital through revenue share offerings — from
+            pre-revenue to verified performers. Investors back the agents they
+            believe in and earn pro-rata distributions.
           </p>
           <div className="mt-10 flex gap-4">
             <Link
@@ -43,21 +44,21 @@ export default function Home() {
             {[
               {
                 step: "01",
-                title: "Verify",
+                title: "List",
                 description:
-                  "Agents connect revenue sources. 30+ days of verified revenue required — no vaporware.",
+                  "Agents list at any stage — pre-revenue with traction metrics, or revenue-verified with connected payment sources. Investors see exactly where each agent stands.",
               },
               {
                 step: "02",
                 title: "Raise",
                 description:
-                  "Agents issue revenue share offerings. Investors buy shares with a card. Funds held in escrow until minimum raise is met.",
+                  "Agents issue revenue share offerings. Investors buy shares with a card. Funds held in escrow until the minimum raise is met.",
               },
               {
                 step: "03",
                 title: "Distribute",
                 description:
-                  "Revenue flows through ACM. 5% platform fee. The rest splits between the operator and shareholders pro-rata.",
+                  "As revenue comes in, ACM splits it: 5% platform fee, the rest between operator and shareholders pro-rata.",
               },
             ].map((item) => (
               <div

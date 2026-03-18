@@ -3,6 +3,21 @@ import { notFound } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { InvestButton } from "./invest-button";
 
+const TIER_BADGES: Record<string, { label: string; className: string }> = {
+  pre_revenue: {
+    label: "Pre-Revenue",
+    className: "bg-purple-500/10 text-purple-400",
+  },
+  early_revenue: {
+    label: "Early Revenue",
+    className: "bg-yellow-500/10 text-yellow-500",
+  },
+  verified: {
+    label: "Verified",
+    className: "bg-accent/10 text-accent",
+  },
+};
+
 export default async function AgentDetailPage({
   params,
 }: {
@@ -20,6 +35,10 @@ export default async function AgentDetailPage({
 
   if (!agent) notFound();
 
+  const tier = agent.revenue_tier ?? "pre_revenue";
+  const tierBadge = TIER_BADGES[tier] ?? TIER_BADGES.pre_revenue;
+  const isPreRevenue = tier === "pre_revenue";
+
   const { data: offerings } = await supabase
     .from("offerings")
     .select("*")
@@ -34,7 +53,6 @@ export default async function AgentDetailPage({
     .order("period_end", { ascending: false })
     .limit(12);
 
-  // Calculate totals
   const totalDistributed =
     distributions?.reduce(
       (sum, d) => sum + Number(d.investor_amount),
@@ -54,15 +72,9 @@ export default async function AgentDetailPage({
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-3xl font-bold">{agent.name}</h1>
             <span
-              className={`text-xs font-medium px-2 py-1 rounded-full ${
-                agent.status === "listed"
-                  ? "bg-blue-500/10 text-blue-500"
-                  : agent.status === "verified"
-                    ? "bg-accent/10 text-accent"
-                    : "bg-yellow-500/10 text-yellow-500"
-              }`}
+              className={`text-xs font-medium px-2 py-1 rounded-full ${tierBadge.className}`}
             >
-              {agent.status}
+              {tierBadge.label}
             </span>
           </div>
           <p className="text-muted">{agent.category}</p>
@@ -71,57 +83,110 @@ export default async function AgentDetailPage({
 
       <p className="text-muted mb-8 max-w-2xl">{agent.description}</p>
 
-      {/* Key metrics */}
-      <div className="grid sm:grid-cols-4 gap-4 mb-10">
-        <div className="p-5 rounded-xl border border-card-border bg-card">
-          <p className="text-muted text-xs">Monthly Revenue</p>
-          <p className="text-xl font-bold mt-1">
-            ${Number(agent.monthly_revenue).toLocaleString()}
-          </p>
-        </div>
-        <div className="p-5 rounded-xl border border-card-border bg-card">
-          <p className="text-muted text-xs">Verified Days</p>
-          <p className="text-xl font-bold mt-1">{agent.verification_days}</p>
-        </div>
-        <div className="p-5 rounded-xl border border-card-border bg-card">
-          <p className="text-muted text-xs">Total Revenue (tracked)</p>
-          <p className="text-xl font-bold mt-1">
-            ${totalGrossRevenue.toLocaleString()}
-          </p>
-        </div>
-        <div className="p-5 rounded-xl border border-card-border bg-card">
-          <p className="text-muted text-xs">Distributed to Investors</p>
-          <p className="text-xl font-bold mt-1 text-accent">
-            ${totalDistributed.toLocaleString()}
-          </p>
-        </div>
+      {/* Key metrics — adapt to tier */}
+      <div className={`grid gap-4 mb-10 ${isPreRevenue ? "sm:grid-cols-3" : "sm:grid-cols-4"}`}>
+        {isPreRevenue ? (
+          <>
+            <div className="p-5 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-xs">Active Users</p>
+              <p className="text-xl font-bold mt-1">
+                {(agent.active_users ?? 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-5 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-xs">Stage</p>
+              <p className="text-xl font-bold mt-1">Pre-Revenue</p>
+            </div>
+            <div className="p-5 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-xs">Distributed to Investors</p>
+              <p className="text-xl font-bold mt-1 text-accent">
+                ${totalDistributed.toLocaleString()}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="p-5 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-xs">Monthly Revenue</p>
+              <p className="text-xl font-bold mt-1">
+                ${Number(agent.monthly_revenue).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-5 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-xs">Verified Days</p>
+              <p className="text-xl font-bold mt-1">
+                {agent.verification_days}
+              </p>
+            </div>
+            <div className="p-5 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-xs">Total Revenue (tracked)</p>
+              <p className="text-xl font-bold mt-1">
+                ${totalGrossRevenue.toLocaleString()}
+              </p>
+            </div>
+            <div className="p-5 rounded-xl border border-card-border bg-card">
+              <p className="text-muted text-xs">Distributed to Investors</p>
+              <p className="text-xl font-bold mt-1 text-accent">
+                ${totalDistributed.toLocaleString()}
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Revenue source */}
-      <div className="mb-10">
-        <h2 className="text-lg font-bold mb-3">Revenue Verification</h2>
-        <div className="p-4 rounded-xl border border-card-border bg-card flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium capitalize">
-              {agent.revenue_source}
-            </p>
-            <p className="text-xs text-muted">
-              {agent.revenue_verified_at
-                ? `Verified since ${new Date(agent.revenue_verified_at).toLocaleDateString()}`
-                : "Verification in progress"}
+      {/* Investor pitch */}
+      {agent.pitch && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold mb-3">Investor Pitch</h2>
+          <div className="p-5 rounded-xl border border-card-border bg-card">
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {agent.pitch}
             </p>
           </div>
-          <span
-            className={`text-xs px-2 py-1 rounded-full ${
-              agent.revenue_verified_at
-                ? "bg-accent/10 text-accent"
-                : "bg-yellow-500/10 text-yellow-500"
-            }`}
-          >
-            {agent.revenue_verified_at ? "Connected" : "Pending"}
-          </span>
         </div>
-      </div>
+      )}
+
+      {/* Demo link */}
+      {agent.demo_url && (
+        <div className="mb-10">
+          <a
+            href={agent.demo_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-card-border text-sm font-medium hover:border-accent/50 transition-colors"
+          >
+            View Demo / Product &rarr;
+          </a>
+        </div>
+      )}
+
+      {/* Revenue verification — only for revenue-generating agents */}
+      {!isPreRevenue && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold mb-3">Revenue Verification</h2>
+          <div className="p-4 rounded-xl border border-card-border bg-card flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium capitalize">
+                {agent.revenue_source}
+              </p>
+              <p className="text-xs text-muted">
+                {agent.revenue_verified_at
+                  ? `Verified since ${new Date(agent.revenue_verified_at).toLocaleDateString()}`
+                  : "Verification in progress"}
+              </p>
+            </div>
+            <span
+              className={`text-xs px-2 py-1 rounded-full ${
+                agent.revenue_verified_at
+                  ? "bg-accent/10 text-accent"
+                  : "bg-yellow-500/10 text-yellow-500"
+              }`}
+            >
+              {agent.revenue_verified_at ? "Connected" : "Pending"}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Active offerings */}
       <div className="mb-10">
@@ -168,7 +233,6 @@ export default async function AgentDetailPage({
                     </div>
                   </div>
 
-                  {/* Progress bar */}
                   <div className="mb-4">
                     <div className="flex justify-between text-xs text-muted mb-1">
                       <span>${raised.toLocaleString()} raised</span>
@@ -189,7 +253,6 @@ export default async function AgentDetailPage({
                     </p>
                   </div>
 
-                  {/* Invest CTA */}
                   <InvestButton
                     offeringId={offering.id}
                     pricePerShare={Number(offering.price_per_share)}
