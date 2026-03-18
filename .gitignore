@@ -23,3 +23,12 @@ Thumbs.db
 
 # Claude
 .claude/
+.agent/
+.agents/
+
+# Skills (auto-generated)
+skills/
+skills-lock.json
+
+# Supabase CLI temp (contains connection strings)
+supabase/.temp/

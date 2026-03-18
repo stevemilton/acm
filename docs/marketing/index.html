@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hive Round — The Capital Market for AI Agents</title>
+  <meta name="description" content="The capital market for AI agents. Operators raise funding through verified revenue share tokens. Investors earn real yield from agent revenue. Smart contract escrow. No vaporware.">
+  <meta property="og:title" content="Hive Round — The Capital Market for AI Agents">
+  <meta property="og:description" content="The capital market for AI agents. Operators raise funding. Investors earn real yield. Smart contract escrow. No vaporware.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://hiveround.com">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Hive Round — The Capital Market for AI Agents">
+  <meta name="twitter:description" content="The capital market for AI agents. Operators raise funding. Investors earn real yield. Smart contract escrow. No vaporware.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a0a;
+      --fg: #ededed;
+      --muted: #a1a1aa;
+      --accent: #14b8a6;
+      --accent-hover: #0d9488;
+      --card: #141414;
+      --border: #262626;
+      --border-light: #333;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Nav ---- */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 10, 10, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+      color: var(--fg);
+      text-decoration: none;
+    }
+    .logo span { color: var(--accent); }
+    .nav-cta {
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 20px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: var(--accent-hover); }
+
+    /* ---- Sections ---- */
+    section { padding: 96px 24px; }
+    .container { max-width: 1120px; margin: 0 auto; }
+    .section-border { border-top: 1px solid var(--border); }
+
+    /* ---- Hero ---- */
+    .hero { padding: 120px 24px 96px; }
+    .hero-content { max-width: 640px; }
+    .hero-tag {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 16px;
+      letter-spacing: 0.02em;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 60px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+    .hero p {
+      margin-top: 24px;
+      font-size: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 520px;
+    }
+    .hero-form {
+      margin-top: 40px;
+      display: flex;
+      gap: 12px;
+      max-width: 440px;
+    }
+    .hero-form input {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--fg);
+      font-family: var(--sans);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .hero-form input::placeholder { color: var(--muted); }
+    .hero-form input:focus { border-color: var(--accent); }
+    .hero-form button {
+      padding: 14px 28px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: var(--bg);
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .hero-form button:hover { background: var(--accent-hover); }
+    .hero-note {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ---- Role toggle ---- */
+    .role-toggle {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      max-width: 440px;
+    }
+    .role-toggle button {
+      flex: 1;
+      padding: 12px 16px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      background: var(--card);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .role-toggle button.active {
+      background: rgba(20, 184, 166, 0.12);
+      color: var(--accent);
+    }
+    .role-toggle button:not(:last-child) {
+      border-right: 1px solid var(--border);
+    }
+    .role-toggle button:hover:not(.active) {
+      color: var(--fg);
+      background: #1a1a1a;
+    }
+
+    /* ---- Problem ---- */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    .problem-grid h2 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .problem-grid h2 span { color: var(--accent); }
+    .problem-text p {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .problem-text p:last-child { margin-bottom: 0; }
+    .pull-quote {
+      border-left: 2px solid var(--accent);
+      padding-left: 20px;
+      font-size: 17px;
+      color: var(--fg);
+      font-style: italic;
+      line-height: 1.6;
+      margin-top: 8px;
+    }
+
+    /* ---- How it works ---- */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .step {
+      padding: 32px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .step-num {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+    }
+    .step h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .step p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-top: 12px;
+    }
+    .section-header {
+      max-width: 480px;
+    }
+    .section-header h2 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .section-header p {
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 16px;
+    }
+
+    /* ---- Differentiators ---- */
+    .diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin-top: 48px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--border);
+    }
+    .diff-col-header {
+      padding: 20px 28px;
+      font-size: 13px;
+      font-family: var(--mono);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .diff-col-header.them { background: #1a1212; color: #f87171; }
+    .diff-col-header.us { background: #0f1a18; color: var(--accent); }
+    .diff-cell {
+      padding: 16px 28px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .diff-cell.them { background: #110e0e; color: var(--muted); }
+    .diff-cell.us { background: #0c1412; color: var(--fg); }
+
+    /* ---- Signals ---- */
+    .signals {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .signal {
+      padding: 28px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .signal-value {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .signal-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    .signal-source {
+      font-size: 11px;
+      color: #52525b;
+      margin-top: 12px;
+      font-family: var(--mono);
+    }
+
+    /* ---- Operator section ---- */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      margin-top: 48px;
+    }
+    .two-col h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .two-col p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .benefit-list {
+      list-style: none;
+      margin-top: 20px;
+    }
+    .benefit-list li {
+      padding: 10px 0;
+      font-size: 15px;
+      color: var(--fg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .benefit-list li:first-child { border-top: 1px solid var(--border); }
+
+    /* ---- Yield example ---- */
+    .yield-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+      margin-top: 48px;
+    }
+    .yield-card {
+      padding: 40px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .yield-card .label {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .yield-card .big-num {
+      font-size: 56px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-top: 8px;
+      line-height: 1;
+    }
+    .yield-card .big-label {
+      font-size: 15px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .yield-card .divider {
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+    .yield-breakdown { list-style: none; }
+    .yield-breakdown li {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .yield-breakdown li:last-child { border-bottom: none; }
+    .yield-breakdown li span:last-child { color: var(--fg); font-weight: 500; }
+    .yield-text h2 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .yield-text p {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+      margin-top: 16px;
+    }
+    .protections {
+      margin-top: 32px;
+      list-style: none;
+    }
+    .protections li {
+      padding: 10px 0;
+      font-size: 15px;
+      color: var(--fg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .protections li:last-child { border-bottom: none; }
+    .check {
+      color: var(--accent);
+      font-weight: 600;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ---- Final CTA ---- */
+    .final-cta {
+      text-align: center;
+      padding: 120px 24px;
+    }
+    .final-cta h2 {
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .final-cta p {
+      color: var(--muted);
+      font-size: 17px;
+      margin-top: 16px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .final-cta .hero-form {
+      margin: 32px auto 0;
+      justify-content: center;
+    }
+    .final-cta .hero-note {
+      text-align: center;
+    }
+
+    /* ---- Footer ---- */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 24px;
+    }
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ---- Success state ---- */
+    .form-success {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: rgba(20, 184, 166, 0.08);
+      font-size: 15px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .form-success.show { display: flex; }
+    .hero-form.hidden { display: none; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 768px) {
+      section { padding: 64px 20px; }
+      .hero { padding: 80px 20px 64px; }
+      .problem-grid { grid-template-columns: 1fr; gap: 32px; }
+      .steps { grid-template-columns: 1fr; }
+      .diff-grid { grid-template-columns: 1fr; }
+      .diff-col-header.them { order: 1; }
+      .diff-col-header.us { order: 3; }
+      .diff-cell.them { order: 2; }
+      .diff-cell.us { order: 4; }
+      .signals { grid-template-columns: 1fr 1fr; }
+      .yield-grid { grid-template-columns: 1fr; }
+      .two-col { grid-template-columns: 1fr; gap: 40px; }
+      .hero-form { flex-direction: column; }
+      .hero-form button { width: 100%; }
+      .footer-inner { flex-direction: column; gap: 12px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="logo"><span>hive</span>round</a>
+      <a href="#waitlist" class="nav-cta">Get Early Access</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <p class="hero-tag">Verify. Raise. Distribute.</p>
+        <h1>The capital market for AI agents.</h1>
+        <p>Agents raise funding through verified revenue share tokens. Investors earn real yield from agent revenue. Smart contract escrow. No vaporware.</p>
+        <div class="role-toggle" id="hero-toggle">
+          <button class="active" onclick="setRole('investor', 'hero')">I want to invest</button>
+          <button onclick="setRole('operator', 'hero')">I want to raise capital</button>
+        </div>
+        <form class="hero-form" id="hero-form" onsubmit="handleSubmit(event, this)">
+          <input type="hidden" name="role" value="investor">
+          <input type="email" placeholder="you@example.com" required aria-label="Email address">
+          <button type="submit">Join Waitlist</button>
+        </form>
+        <div class="form-success" id="hero-success">You're on the list. We'll be in touch.</div>
+        <p class="hero-note" id="hero-note">Early access for investors. Mainnet launching Q3 2026.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section class="section-border">
+    <div class="container">
+      <div class="problem-grid">
+        <h2>AI agents earn revenue.<br><span>They can't raise capital.</span></h2>
+        <div class="problem-text">
+          <p>AI agents are revenue-generating software. Visa, Mastercard, Stripe, and Coinbase all shipped agent payment rails in 2025-2026. Agents can earn money. What they can't do is raise it.</p>
+          <p>Token launches solved fundraising but not trust. 90% of projects had no real revenue. Bonding curves, meme-coin dynamics, pump-and-dump cycles.</p>
+          <div class="pull-quote">Everyone else is building the casino. Hive Round is the exchange.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section-border">
+    <div class="container">
+      <div class="section-header">
+        <h2>How it works</h2>
+        <p>Three steps from verified revenue to investor yield.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="step-num">01</span>
+          <h3>Verify</h3>
+          <p>Agents connect revenue sources &mdash; Stripe, x402, on-chain wallets. 30+ days of verified revenue required before listing. No vaporware. No self-reported numbers.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">02</span>
+          <h3>Raise</h3>
+          <p>Agents issue revenue share tokens. Investors buy with FDUSD. Capital sits in smart contract escrow until the minimum raise is met &mdash; if it's not, you get refunded automatically.</p>
+        </div>
+        <div class="step">
+          <span class="step-num">03</span>
+          <h3>Distribute</h3>
+          <p>Revenue flows through the smart contract. Platform takes 5%. The rest splits between the operator and shareholders pro-rata. Claim your earnings any time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Differentiators -->
+  <section class="section-border">
+    <div class="container">
+      <div class="section-header">
+        <h2>Speculation vs. revenue share</h2>
+        <p>Most platforms let you bet on agents. Hive Round lets you invest in them.</p>
+      </div>
+      <div class="diff-grid">
+        <div class="diff-col-header them">Speculative platforms</div>
+        <div class="diff-col-header us">Hive Round</div>
+        <div class="diff-cell them">Bonding curves, no revenue verification</div>
+        <div class="diff-cell us">30+ days verified revenue required to list</div>
+        <div class="diff-cell them">Pump-and-dump token dynamics</div>
+        <div class="diff-cell us">Non-transferable shares, 6-month lock-up</div>
+        <div class="diff-cell them">No investor protections</div>
+        <div class="diff-cell us">Smart contract escrow, cliff protection, auto-refund</div>
+        <div class="diff-cell them">Returns depend on token price speculation</div>
+        <div class="diff-cell us">Returns come from real revenue distributions</div>
+        <div class="diff-cell them">Agents launch tokens with no track record</div>
+        <div class="diff-cell us">Agents prove revenue before raising capital</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Market signals -->
+  <section class="section-border">
+    <div class="container">
+      <div class="section-header">
+        <h2>The agent economy is live</h2>
+        <p>Payment infrastructure shipped. Capital infrastructure hasn't. That's the gap.</p>
+      </div>
+      <div class="signals">
+        <div class="signal">
+          <div class="signal-value">$3-5T</div>
+          <div class="signal-label">Projected agentic commerce by 2030</div>
+          <div class="signal-source">McKinsey</div>
+        </div>
+        <div class="signal">
+          <div class="signal-value">50M+</div>
+          <div class="signal-label">Agent transactions via x402 alone</div>
+          <div class="signal-source">Coinbase</div>
+        </div>
+        <div class="signal">
+          <div class="signal-value">5</div>
+          <div class="signal-label">Major agent payment protocols live in 2025-26</div>
+          <div class="signal-source">Visa, MC, Stripe, Coinbase, Google</div>
+        </div>
+        <div class="signal">
+          <div class="signal-value">0</div>
+          <div class="signal-label">Platforms for verified agent capital raises</div>
+          <div class="signal-source">Until now</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Two sides -->
+  <section class="section-border">
+    <div class="container">
+      <div class="section-header">
+        <h2>One marketplace. Two sides.</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <h3>For operators &amp; developers</h3>
+          <p>You built an agent that earns revenue. Now scale it without giving up equity.</p>
+          <ul class="benefit-list">
+            <li><span class="check">&#10003;</span>Raise capital through revenue share &mdash; keep full ownership</li>
+            <li><span class="check">&#10003;</span>Self-serve listing: connect revenue, set terms, deploy contracts</li>
+            <li><span class="check">&#10003;</span>Smart contract escrow builds investor trust automatically</li>
+            <li><span class="check">&#10003;</span>Revenue verification gives your agent credibility others can't fake</li>
+          </ul>
+        </div>
+        <div>
+          <h3>For investors</h3>
+          <p>Earn yield from real agent revenue. Not speculation. Not token inflation. Revenue.</p>
+          <ul class="benefit-list">
+            <li><span class="check">&#10003;</span>Every listed agent has 30+ days of verified revenue</li>
+            <li><span class="check">&#10003;</span>Pro-rata distributions flow through auditable smart contracts</li>
+            <li><span class="check">&#10003;</span>Escrow protection: auto-refund if minimum raise not met</li>
+            <li><span class="check">&#10003;</span>Revenue cliff protection: &gt;50% drop triggers escrow return</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Yield example -->
+  <section class="section-border">
+    <div class="container">
+      <div class="yield-grid">
+        <div class="yield-card">
+          <div class="label">Example investment</div>
+          <div class="big-num">22.8%</div>
+          <div class="big-label">Annualised yield from revenue share</div>
+          <div class="divider"></div>
+          <ul class="yield-breakdown">
+            <li><span>Agent monthly revenue</span><span>$10,000</span></li>
+            <li><span>Revenue share offered</span><span>20%</span></li>
+            <li><span>Share price</span><span>$50</span></li>
+            <li><span>Monthly distribution per share</span><span>$9.50</span></li>
+            <li><span>Annual return on $50 share</span><span>$114</span></li>
+          </ul>
+        </div>
+        <div class="yield-text">
+          <h2>Real yield from real revenue</h2>
+          <p>Every distribution comes from verified agent earnings flowing through an auditable smart contract. Not token inflation. Not speculation. Revenue.</p>
+          <ul class="protections">
+            <li><span class="check">&#10003;</span>Smart contract escrow &mdash; auto-refund if minimum raise not met</li>
+            <li><span class="check">&#10003;</span>Revenue cliff protection &mdash; &gt;50% drop triggers escrow return</li>
+            <li><span class="check">&#10003;</span>Operator vesting &mdash; 12-month lock, monthly vest</li>
+            <li><span class="check">&#10003;</span>Non-transferable shares &mdash; no secondary market manipulation</li>
+            <li><span class="check">&#10003;</span>30+ days verified revenue before listing</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="section-border final-cta" id="waitlist">
+    <div class="container">
+      <h2>Get in early.</h2>
+      <p>Mainnet launches Q3 2026 on BNB Chain. Waitlist gets priority access.</p>
+      <div class="role-toggle" id="footer-toggle" style="margin: 32px auto 0; max-width: 440px;">
+        <button class="active" onclick="setRole('investor', 'footer')">I want to invest</button>
+        <button onclick="setRole('operator', 'footer')">I want to raise capital</button>
+      </div>
+      <form class="hero-form" id="footer-form" onsubmit="handleSubmit(event, this)" style="margin-top: 16px;">
+        <input type="hidden" name="role" value="investor">
+        <input type="email" placeholder="you@example.com" required aria-label="Email address">
+        <button type="submit">Join Waitlist</button>
+      </form>
+      <div class="form-success" id="footer-success">You're on the list. We'll be in touch.</div>
+      <p class="hero-note">No spam. One email when early access opens.</p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <span>Hive Round &mdash; Polar Industries Ltd</span>
+      <span>BNB Chain &middot; Testnet Live &middot; Mainnet Q3 2026</span>
+    </div>
+  </footer>
+
+  <script>
+    var heroNotes = {
+      investor: 'Early access for investors. Mainnet launching Q3 2026.',
+      operator: 'Early access for operators. List your agent before launch.'
+    };
+
+    function setRole(role, section) {
+      var toggle = document.getElementById(section + '-toggle');
+      var buttons = toggle.querySelectorAll('button');
+      buttons[0].classList.toggle('active', role === 'investor');
+      buttons[1].classList.toggle('active', role === 'operator');
+
+      var form = document.getElementById(section + '-form');
+      form.querySelector('input[name="role"]').value = role;
+
+      if (section === 'hero') {
+        document.getElementById('hero-note').textContent = heroNotes[role];
+      }
+    }
+
+    function handleSubmit(e, form) {
+      e.preventDefault();
+      var email = form.querySelector('input[type="email"]').value;
+      var role = form.querySelector('input[name="role"]').value;
+
+      // TODO: Wire to Supabase, Loops, or any email capture backend
+      console.log('Waitlist signup:', email, 'role:', role);
+
+      form.classList.add('hidden');
+      form.previousElementSibling.classList.add('hidden'); // hide toggle
+      var successId = form.id === 'hero-form' ? 'hero-success' : 'footer-success';
+      document.getElementById(successId).classList.add('show');
+    }
+  </script>
+
+</body>
+</html>
