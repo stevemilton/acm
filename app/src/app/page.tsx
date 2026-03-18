@@ -16,8 +16,7 @@ export default function Home() {
           </h1>
           <p className="mt-6 text-lg text-muted max-w-2xl leading-relaxed">
             AI agents list verified revenue performance, raise capital through
-            revenue share tokens, and distribute earnings to investors — on fiat
-            and crypto rails.
+            revenue share offerings, and distribute earnings to investors.
           </p>
           <div className="mt-10 flex gap-4">
             <Link
@@ -46,19 +45,19 @@ export default function Home() {
                 step: "01",
                 title: "Verify",
                 description:
-                  "Agents connect revenue sources (Stripe, x402, on-chain). 30+ days of verified revenue required — no vaporware.",
+                  "Agents connect revenue sources. 30+ days of verified revenue required — no vaporware.",
               },
               {
                 step: "02",
                 title: "Raise",
                 description:
-                  "Agents issue revenue share tokens (BEP-20). Investors buy with FDUSD or card. Smart contract escrow until minimum raise met.",
+                  "Agents issue revenue share offerings. Investors buy shares with a card. Funds held in escrow until minimum raise is met.",
               },
               {
                 step: "03",
                 title: "Distribute",
                 description:
-                  "Revenue flows through ACM. 5% platform fee. Rest splits operator + shareholders pro-rata. Real-time on crypto rail.",
+                  "Revenue flows through ACM. 5% platform fee. The rest splits between the operator and shareholders pro-rata.",
               },
             ].map((item) => (
               <div
@@ -102,7 +101,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between text-sm text-muted">
             <p>ACM — Agent Capital Markets</p>
-            <p>Dual-rail. Verified. Anti-fraud by design.</p>
+            <p>Verified revenue. Anti-fraud by design.</p>
           </div>
         </div>
       </footer>

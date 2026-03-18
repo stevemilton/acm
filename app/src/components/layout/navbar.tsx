@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { SignOutButton } from "./sign-out-button";
-import { ConnectWalletButton } from "../wallet/connect-button";
 
 export async function Navbar() {
   const user = await getUser();
@@ -48,7 +47,6 @@ export async function Navbar() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <ConnectWalletButton />
             {user ? (
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted hidden sm:inline">

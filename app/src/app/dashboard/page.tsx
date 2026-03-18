@@ -1,7 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { TestFaucet } from "./client-components";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -97,11 +96,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Testnet Faucet */}
-      <div className="mb-10 max-w-sm">
-        <TestFaucet />
-      </div>
-
       {/* Holdings */}
       <div className="rounded-xl border border-card-border bg-card overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-card-border">
@@ -119,7 +113,6 @@ export default async function DashboardPage() {
                 <th className="text-right px-6 py-3 font-medium">
                   Rev Share %
                 </th>
-                <th className="text-right px-6 py-3 font-medium">Rail</th>
                 <th className="text-right px-6 py-3 font-medium">Date</th>
               </tr>
             </thead>
@@ -157,17 +150,6 @@ export default async function DashboardPage() {
                       {offering?.revenue_share_pct
                         ? `${Number(offering.revenue_share_pct)}%`
                         : "—"}
-                    </td>
-                    <td className="px-6 py-3 text-right">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          share.rail === "crypto"
-                            ? "bg-purple-500/10 text-purple-400"
-                            : "bg-blue-500/10 text-blue-400"
-                        }`}
-                      >
-                        {share.rail}
-                      </span>
                     </td>
                     <td className="px-6 py-3 text-right text-muted">
                       {new Date(share.purchased_at).toLocaleDateString()}

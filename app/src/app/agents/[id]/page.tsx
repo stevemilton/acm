@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { InvestButton } from "./invest-button";
-import { EscrowStatus, ClaimRevenue } from "./client-components";
 
 export default async function AgentDetailPage({
   params,
@@ -196,7 +195,6 @@ export default async function AgentDetailPage({
                     pricePerShare={Number(offering.price_per_share)}
                     sharesRemaining={sharesRemaining}
                     isLoggedIn={!!user}
-                    escrowAddress={offering.escrow_address}
                   />
                 </div>
               );
@@ -207,21 +205,6 @@ export default async function AgentDetailPage({
             No active offerings
           </div>
         )}
-      </div>
-
-      {/* On-chain escrow status */}
-      <div className="mb-10">
-        <h2 className="text-lg font-bold mb-3">On-Chain Escrow</h2>
-        <EscrowStatus escrowAddress={offerings?.[0]?.escrow_address} />
-      </div>
-
-      {/* On-chain revenue claims for investors */}
-      <div className="mb-10">
-        <h2 className="text-lg font-bold mb-3">Claim Revenue</h2>
-        <ClaimRevenue
-          distributorAddress={offerings?.[0]?.distributor_address}
-          shareTokenAddress={offerings?.[0]?.share_token_address}
-        />
       </div>
 
       {/* Distribution history */}
