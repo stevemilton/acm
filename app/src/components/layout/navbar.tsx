@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getUser } from "@/lib/auth";
 import { SignOutButton } from "./sign-out-button";
+import { MobileMenu } from "./mobile-menu";
 
 export async function Navbar() {
   const user = await getUser();
@@ -62,6 +63,11 @@ export async function Navbar() {
                 Sign In
               </Link>
             )}
+            <MobileMenu
+              isLoggedIn={!!user}
+              role={user?.user_metadata?.role}
+              email={user?.email}
+            />
           </div>
         </div>
       </div>

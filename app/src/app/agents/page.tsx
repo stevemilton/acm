@@ -102,12 +102,12 @@ export default async function AgentsPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-card-border bg-card p-16 text-center">
-          <p className="text-muted text-lg mb-2">No agents listed yet</p>
+          <p className="text-muted text-lg mb-2">
+            Agents are being verified
+          </p>
           <p className="text-muted text-sm">
-            Be the first to{" "}
-            <Link href="/signup" className="text-accent hover:underline">
-              list your AI agent
-            </Link>
+            New agents are going through revenue verification — check back soon
+            to see available opportunities.
           </p>
         </div>
       )}

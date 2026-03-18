@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -29,7 +29,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    const role = data.user?.user_metadata?.role;
+    router.push(role === "operator" ? "/operator" : "/dashboard");
     router.refresh();
   }
 

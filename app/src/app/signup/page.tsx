@@ -35,7 +35,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(role === "operator" ? "/operator" : "/dashboard");
     router.refresh();
   }
 
