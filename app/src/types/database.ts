@@ -10,6 +10,15 @@ export type AgentStatus = "pending" | "verified" | "listed" | "suspended";
 export type EscrowStatus = "pending" | "funded" | "released" | "refunded";
 export type Rail = "fiat" | "crypto";
 export type KycStatus = "none" | "pending" | "verified" | "rejected";
+export type PaymentStatus =
+  | "pending"
+  | "tokenized"
+  | "requires_3ds"
+  | "authorized"
+  | "captured"
+  | "declined"
+  | "error"
+  | "refunded";
 
 export interface Database {
   public: {
@@ -242,6 +251,65 @@ export interface Database {
           updated_at?: string;
         };
       };
+      payments: {
+        Row: {
+          id: string;
+          offering_id: string;
+          investor_id: string;
+          quantity: number;
+          amount: number;
+          currency: string;
+          status: PaymentStatus;
+          fiserv_order_id: string | null;
+          fiserv_ipg_tx_id: string | null;
+          fiserv_session_id: string | null;
+          card_last4: string | null;
+          card_brand: string | null;
+          payment_token: string | null;
+          three_ds_type: string | null;
+          three_ds_data: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          offering_id: string;
+          investor_id: string;
+          quantity: number;
+          amount: number;
+          currency?: string;
+          status?: PaymentStatus;
+          fiserv_order_id?: string | null;
+          fiserv_ipg_tx_id?: string | null;
+          fiserv_session_id?: string | null;
+          card_last4?: string | null;
+          card_brand?: string | null;
+          payment_token?: string | null;
+          three_ds_type?: string | null;
+          three_ds_data?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          offering_id?: string;
+          investor_id?: string;
+          quantity?: number;
+          amount?: number;
+          currency?: string;
+          status?: PaymentStatus;
+          fiserv_order_id?: string | null;
+          fiserv_ipg_tx_id?: string | null;
+          fiserv_session_id?: string | null;
+          card_last4?: string | null;
+          card_brand?: string | null;
+          payment_token?: string | null;
+          three_ds_type?: string | null;
+          three_ds_data?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -250,6 +318,7 @@ export interface Database {
       escrow_status: EscrowStatus;
       rail: Rail;
       kyc_status: KycStatus;
+      payment_status: PaymentStatus;
     };
   };
 }

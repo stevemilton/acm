@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +12,15 @@ import {
 import { parseUnits, formatUnits } from "viem";
 import { ESCROW_ABI, ERC20_ABI } from "@/lib/contracts";
 import { getFdusdAddress, getExplorerUrl } from "@/lib/chain-config";
+
+type FiatStep =
+  | "idle"
+  | "tokenizing"
+  | "card-entry"
+  | "authorizing"
+  | "3ds"
+  | "capturing"
+  | "complete";
 
 export function InvestButton({
   offeringId,
@@ -33,9 +42,19 @@ export function InvestButton({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
-  const [step, setStep] = useState<"idle" | "approving" | "depositing">("idle");
+  const [cryptoStep, setCryptoStep] = useState<
+    "idle" | "approving" | "depositing"
+  >("idle");
+  const [fiatStep, setFiatStep] = useState<FiatStep>("idle");
+  const [cardInfo, setCardInfo] = useState<{
+    last4: string;
+    brand: string;
+  } | null>(null);
+
   const router = useRouter();
   const supabase = createClient();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const cardWindowRef = useRef<Window | null>(null);
 
   // Wagmi hooks for crypto rail
   const { address, isConnected } = useAccount();
@@ -49,7 +68,6 @@ export function InvestButton({
     : undefined;
   const fdusdAddress = getFdusdAddress();
 
-  // Total cost in FDUSD (18 decimals)
   const totalCostNumber = quantity * pricePerShare;
   const totalCostUnits = parseUnits(totalCostNumber.toString(), 18);
 
@@ -63,62 +81,145 @@ export function InvestButton({
   });
 
   // Read FDUSD allowance for escrow
-  const { data: fdusdAllowance, refetch: refetchAllowance } = useReadContract({
-    address: fdusdAddress,
-    abi: ERC20_ABI,
-    functionName: "allowance",
-    args: address && escrowAddress ? [address, escrowAddress] : undefined,
-    query: { enabled: !!address && !!escrowAddress && rail === "crypto" },
-  });
+  const { data: fdusdAllowance, refetch: refetchAllowance } =
+    useReadContract({
+      address: fdusdAddress,
+      abi: ERC20_ABI,
+      functionName: "allowance",
+      args:
+        address && escrowAddress ? [address, escrowAddress] : undefined,
+      query: {
+        enabled: !!address && !!escrowAddress && rail === "crypto",
+      },
+    });
 
   const formattedBalance = fdusdBalance
     ? formatUnits(fdusdBalance, 18)
     : "0";
-
   const needsApproval =
     fdusdAllowance !== undefined && fdusdAllowance < totalCostUnits;
-
   const insufficientBalance =
     fdusdBalance !== undefined && fdusdBalance < totalCostUnits;
 
+  // Listen for 3DS iframe messages
+  const handle3dsMessage = useCallback(
+    async (event: MessageEvent) => {
+      if (event.data?.type !== "acm-3ds") return;
+
+      const { status } = event.data;
+      if (status === "captured") {
+        setFiatStep("complete");
+        setSuccess(true);
+        setLoading(false);
+        router.refresh();
+      } else if (status === "challenge") {
+        setFiatStep("3ds");
+      } else {
+        setError(event.data.message || "Payment failed");
+        setFiatStep("idle");
+        setLoading(false);
+      }
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    window.addEventListener("message", handle3dsMessage);
+    return () => window.removeEventListener("message", handle3dsMessage);
+  }, [handle3dsMessage]);
+
+  // ── Fiat (Card) Flow ──────────────────────────────────
+
   async function handleFiatInvest() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
+    setFiatStep("tokenizing");
+
+    // Step 1: Initiate tokenization
+    const tokenizeRes = await fetch("/api/payments/tokenize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offeringId, quantity }),
+    });
+
+    if (!tokenizeRes.ok) {
+      const err = await tokenizeRes.json();
+      throw new Error(err.error || "Failed to start payment");
+    }
+
+    const { paymentId, setupUrl, sessionId } = await tokenizeRes.json();
+
+    // Step 2: Open Fiserv hosted card entry page
+    setFiatStep("card-entry");
+    const cardWindow = window.open(
+      setupUrl,
+      "acm-card-entry",
+      "width=500,height=600,scrollbars=yes"
+    );
+    cardWindowRef.current = cardWindow;
+
+    // Wait for the popup to close (user completed card entry)
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (!cardWindow || cardWindow.closed) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 500);
+    });
+
+    // Step 3: Authorize payment
+    setFiatStep("authorizing");
+    const authRes = await fetch("/api/payments/authorize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId, sessionId }),
+    });
+
+    const authData = await authRes.json();
+
+    if (authData.status === "captured") {
+      setFiatStep("complete");
       return;
     }
 
-    // Get or create investor profile
-    let { data: investor } = await supabase
-      .from("investors")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
+    if (authData.status === "requires_3ds") {
+      setFiatStep("3ds");
 
-    if (!investor) {
-      const { data: newInvestor, error: invError } = await supabase
-        .from("investors")
-        .insert({ user_id: user.id, kyc_status: "none" })
-        .select("id")
-        .single();
+      if (authData.threeDsType === "method" && authData.threeDsData?.methodForm) {
+        // Render 3DS method iframe
+        if (iframeRef.current) {
+          const doc = iframeRef.current.contentDocument;
+          if (doc) {
+            doc.open();
+            doc.write(authData.threeDsData.methodForm);
+            doc.close();
+          }
+        }
+        // The method-callback route will postMessage back to us
+        return;
+      }
 
-      if (invError) throw new Error(invError.message);
-      investor = newInvestor;
+      if (
+        authData.threeDsType === "challenge" &&
+        authData.threeDsData?.challengeUrl
+      ) {
+        // Open 3DS challenge in popup
+        window.open(
+          authData.threeDsData.challengeUrl,
+          "acm-3ds-challenge",
+          "width=500,height=600,scrollbars=yes"
+        );
+        // The challenge-callback route will redirect back
+        return;
+      }
+
+      throw new Error("Unexpected 3DS state");
     }
 
-    // In production: create Stripe Checkout session first
-    const { error: shareError } = await supabase.from("shares").insert({
-      offering_id: offeringId,
-      investor_id: investor!.id,
-      quantity,
-      purchase_price: pricePerShare,
-      rail: "fiat",
-    });
-
-    if (shareError) throw new Error(shareError.message);
+    // Declined or error
+    throw new Error(authData.error || "Payment failed");
   }
+
+  // ── Crypto Flow ───────────────────────────────────────
 
   async function handleCryptoInvest() {
     if (!isConnected || !address) {
@@ -137,33 +238,29 @@ export function InvestButton({
 
     // Step 1: Approve FDUSD spending if needed
     if (needsApproval) {
-      setStep("approving");
+      setCryptoStep("approving");
       const approveHash = await writeContractAsync({
         address: fdusdAddress,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [escrowAddress, totalCostUnits],
       });
-
-      // Wait for approval tx to be mined
       setTxHash(approveHash);
-      // Brief wait for approval to propagate, then refetch allowance
       await new Promise((resolve) => setTimeout(resolve, 5000));
       await refetchAllowance();
     }
 
-    // Step 2: Deposit into escrow (ERC-20 transferFrom, no value)
-    setStep("depositing");
+    // Step 2: Deposit into escrow
+    setCryptoStep("depositing");
     const depositHash = await writeContractAsync({
       address: escrowAddress,
       abi: ESCROW_ABI,
       functionName: "deposit",
       args: [totalCostUnits],
     });
-
     setTxHash(depositHash);
 
-    // Also record in Supabase for tracking
+    // Record in Supabase
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -190,17 +287,20 @@ export function InvestButton({
           quantity,
           purchase_price: pricePerShare,
           rail: "crypto",
-          token_id: depositHash, // tx hash as reference
+          token_id: depositHash,
         });
       }
     }
   }
 
+  // ── Submit Handler ────────────────────────────────────
+
   async function handleInvest(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setStep("idle");
+    setCryptoStep("idle");
+    setFiatStep("idle");
 
     try {
       if (rail === "fiat") {
@@ -213,10 +313,14 @@ export function InvestButton({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setLoading(false);
-      setStep("idle");
+      if (fiatStep !== "3ds") {
+        setLoading(false);
+        setCryptoStep("idle");
+      }
     }
   }
+
+  // ── Render ────────────────────────────────────────────
 
   if (!isLoggedIn) {
     return (
@@ -234,8 +338,16 @@ export function InvestButton({
       <div className="p-4 rounded-lg bg-accent/10 border border-accent/30 text-center">
         <p className="text-accent font-medium">Investment confirmed!</p>
         <p className="text-sm text-muted mt-1">
-          {quantity} shares for {totalCostNumber.toLocaleString()} FDUSD
+          {quantity} shares for{" "}
+          {rail === "fiat"
+            ? `$${totalCostNumber.toLocaleString()}`
+            : `${totalCostNumber.toLocaleString()} FDUSD`}
         </p>
+        {cardInfo && (
+          <p className="text-xs text-muted mt-1">
+            {cardInfo.brand.toUpperCase()} ****{cardInfo.last4}
+          </p>
+        )}
         {txHash && (
           <a
             href={getExplorerUrl("tx", txHash)}
@@ -268,7 +380,9 @@ export function InvestButton({
     >
       {/* Rail selector */}
       <div>
-        <label className="block text-sm font-medium mb-2">Payment Rail</label>
+        <label className="block text-sm font-medium mb-2">
+          Payment Method
+        </label>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -279,7 +393,7 @@ export function InvestButton({
                 : "border-card-border bg-card text-muted"
             }`}
           >
-            Fiat (Card)
+            Card (USD)
           </button>
           <button
             type="button"
@@ -295,14 +409,13 @@ export function InvestButton({
         </div>
       </div>
 
-      {/* No escrow address for crypto */}
+      {/* Crypto warnings */}
       {rail === "crypto" && !escrowAddress && (
         <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-yellow-500">
           Crypto investment not available for this offering
         </div>
       )}
 
-      {/* Wallet status for crypto */}
       {rail === "crypto" && escrowAddress && !isConnected && (
         <div className="p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20 text-sm text-yellow-500">
           Connect your wallet in the navbar to pay with crypto
@@ -319,7 +432,9 @@ export function InvestButton({
           </div>
           <div>
             <span className="text-muted">FDUSD Balance: </span>
-            <span className={`font-medium ${insufficientBalance ? "text-red-400" : "text-accent"}`}>
+            <span
+              className={`font-medium ${insufficientBalance ? "text-red-400" : "text-accent"}`}
+            >
               {Number(formattedBalance).toLocaleString()} FDUSD
             </span>
           </div>
@@ -368,23 +483,51 @@ export function InvestButton({
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
-      {isTxPending && (
+      {/* Fiat step indicators */}
+      {rail === "fiat" && fiatStep === "tokenizing" && (
+        <p className="text-accent text-sm">Starting payment...</p>
+      )}
+      {rail === "fiat" && fiatStep === "card-entry" && (
+        <p className="text-accent text-sm">
+          Enter your card details in the popup window...
+        </p>
+      )}
+      {rail === "fiat" && fiatStep === "authorizing" && (
+        <p className="text-accent text-sm">Authorizing payment...</p>
+      )}
+      {rail === "fiat" && fiatStep === "3ds" && (
+        <p className="text-accent text-sm">
+          Verifying identity (3D Secure)...
+        </p>
+      )}
+      {rail === "fiat" && fiatStep === "capturing" && (
+        <p className="text-accent text-sm">Confirming payment...</p>
+      )}
+
+      {/* Crypto step indicators */}
+      {rail === "crypto" && isTxPending && (
         <p className="text-accent text-sm">
           Transaction pending... waiting for confirmation
         </p>
       )}
-
-      {step === "approving" && (
+      {rail === "crypto" && cryptoStep === "approving" && (
         <p className="text-accent text-sm">
           Step 1/2: Approving FDUSD spending...
         </p>
       )}
-
-      {step === "depositing" && (
+      {rail === "crypto" && cryptoStep === "depositing" && (
         <p className="text-accent text-sm">
-          {needsApproval ? "Step 2/2" : "Step 1/1"}: Depositing into escrow...
+          {needsApproval ? "Step 2/2" : "Step 1/1"}: Depositing into
+          escrow...
         </p>
       )}
+
+      {/* Hidden 3DS iframe */}
+      <iframe
+        ref={iframeRef}
+        style={{ display: "none", width: 0, height: 0 }}
+        title="3DS Method"
+      />
 
       <div className="flex gap-3">
         <button
@@ -399,20 +542,29 @@ export function InvestButton({
           className="flex-1 py-2.5 rounded-lg bg-accent text-background font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 text-sm"
         >
           {loading || isTxPending
-            ? step === "approving"
-              ? "Approving FDUSD..."
-              : step === "depositing"
-                ? "Depositing..."
-                : "Processing..."
+            ? rail === "fiat"
+              ? fiatStep === "card-entry"
+                ? "Waiting for card..."
+                : fiatStep === "3ds"
+                  ? "Verifying..."
+                  : "Processing..."
+              : cryptoStep === "approving"
+                ? "Approving FDUSD..."
+                : cryptoStep === "depositing"
+                  ? "Depositing..."
+                  : "Processing..."
             : rail === "fiat"
-              ? "Pay with Card"
+              ? `Pay $${totalCostNumber.toLocaleString()} with Card`
               : needsApproval
                 ? "Approve & Deposit FDUSD"
                 : "Deposit FDUSD"}
         </button>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            setOpen(false);
+            setFiatStep("idle");
+          }}
           className="px-4 py-2.5 rounded-lg border border-card-border text-muted hover:text-foreground transition-colors text-sm"
         >
           Cancel
