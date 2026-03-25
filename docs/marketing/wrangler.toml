@@ -1,0 +1,6 @@
+name = "hiveround"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "WAITLIST"
+id = "433df0a1fb294ee9a12a488c6fd23639"

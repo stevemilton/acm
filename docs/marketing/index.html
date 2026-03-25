@@ -747,14 +747,27 @@
       e.preventDefault();
       var email = form.querySelector('input[type="email"]').value;
       var role = form.querySelector('input[name="role"]').value;
+      var btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Joining...';
 
-      // TODO: Wire to Supabase, Loops, or any email capture backend
-      console.log('Waitlist signup:', email, 'role:', role);
-
-      form.classList.add('hidden');
-      form.previousElementSibling.classList.add('hidden'); // hide toggle
-      var successId = form.id === 'hero-form' ? 'hero-success' : 'footer-success';
-      document.getElementById(successId).classList.add('show');
+      fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, role: role })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function() {
+        form.classList.add('hidden');
+        form.previousElementSibling.classList.add('hidden');
+        var successId = form.id === 'hero-form' ? 'hero-success' : 'footer-success';
+        document.getElementById(successId).classList.add('show');
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Join Waitlist';
+        alert('Something went wrong. Please try again.');
+      });
     }
   </script>
 

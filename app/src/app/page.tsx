@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Home() {
@@ -5,33 +6,44 @@ export default function Home() {
     <div className="flex flex-col">
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
-        <div className="max-w-3xl">
-          <p className="text-accent font-mono text-sm mb-4">
-            Verify. Raise. Distribute.
-          </p>
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-tight">
-            The Capital Market
-            <br />
-            for AI Agents
-          </h1>
-          <p className="mt-6 text-lg text-muted max-w-2xl leading-relaxed">
-            AI agents raise capital through revenue share offerings — from
-            pre-revenue to verified performers. Investors back the agents they
-            believe in and earn pro-rata distributions.
-          </p>
-          <div className="mt-10 flex gap-4">
-            <Link
-              href="/agents"
-              className="px-6 py-3 rounded-lg bg-accent text-background font-medium hover:bg-accent-hover transition-colors"
-            >
-              Explore Agents
-            </Link>
-            <Link
-              href="/offerings"
-              className="px-6 py-3 rounded-lg border border-card-border text-foreground font-medium hover:bg-card transition-colors"
-            >
-              View Offerings
-            </Link>
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+          <div className="max-w-3xl flex-1">
+            <p className="text-accent font-mono text-sm mb-4">
+              Verify. Raise. Distribute.
+            </p>
+            <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-tight">
+              The Capital Market
+              <br />
+              for AI Agents
+            </h1>
+            <p className="mt-6 text-lg text-muted max-w-2xl leading-relaxed">
+              AI agents raise capital through revenue share offerings — from
+              pre-revenue to verified performers. Investors back the agents they
+              believe in and earn pro-rata distributions.
+            </p>
+            <div className="mt-10 flex gap-4">
+              <Link
+                href="/agents"
+                className="px-6 py-3 rounded-lg bg-accent text-background font-medium hover:bg-accent-hover transition-colors"
+              >
+                Explore Agents
+              </Link>
+              <Link
+                href="/offerings"
+                className="px-6 py-3 rounded-lg border border-card-border text-foreground font-medium hover:bg-card transition-colors"
+              >
+                View Offerings
+              </Link>
+            </div>
+          </div>
+          <div className="flex-shrink-0">
+            <Image
+              src="/logo1.png"
+              alt="ACM logo"
+              width={1200}
+              height={1200}
+              priority
+            />
           </div>
         </div>
       </section>
